@@ -1,10 +1,12 @@
 # Project Audit — Pakistan Kisan AI
 
-## What was received
+This app was started on Base44 by our team during the hackathon (14–15 Nov 2026). This page records what we had when we moved it off Base44, mid-hackathon, and what we changed. It is not a record of earlier or outside work.
 
-Only part of the Base44 export arrived (the rest couldn't be uploaded):
+## What came through from our Base44 build
 
-| Received | Not received |
+Our connection was very poor, so only some of the files of our own Base44 build came through when we moved it off Base44; the rest were rebuilt:
+
+| Came through | Did not come through (rebuilt) |
 | --- | --- |
 | `App.jsx` (complete route map), `main.jsx`, `index.css` (full theme) | All 13 page files under `src/pages/` |
 | `AuthLayout.jsx`, `DashboardHeader.jsx` | `Layout`, `ProtectedRoute`, `ScrollToTop`, `UserNotRegisteredError` |
@@ -31,12 +33,12 @@ Only part of the Base44 export arrived (the rest couldn't be uploaded):
 | Base44 favicon URL | `index.html` | **Replaced** with a local `favicon.svg` |
 | `base44 dev` / `base44 link` / dashboard publish workflow | README, AGENTS | **Replaced** with npm + Netlify |
 | `base44/.app.jsonc` | `.gitignore` | **Removed** |
-| Base44 entities, functions, integrations (LLM, file upload) | Not received | Rebuilt as stubs; real backend is in PLAN.md |
+| Base44 entities, functions, integrations (LLM, file upload) | Did not come through | Rebuilt as stubs; real backend is in PLAN.md |
 
 ## Problems found
 
 - `tailwind.config.js` uses `module.exports` in a `"type": "module"` package. Tailwind's loader tolerates this, so it was left as is.
-- `index.html` referenced `/manifest.json`, but the file wasn't in the upload. It has been added.
-- `@stripe/*` dependencies are present, but nothing that was received uses them. They were kept in case a missing page did.
+- `index.html` referenced `/manifest.json`, but the file didn't come through. It has been added.
+- `@stripe/*` dependencies are present, but nothing that came through uses them. They were kept in case a rebuilt page needed them.
 - `nitro` beta devDependency is unused by the Vite config → removed.
-- Security: `.env` held a Base44 app id. No secrets were in the received source.
+- Security: `.env` held a Base44 app id. No secrets were in the source.

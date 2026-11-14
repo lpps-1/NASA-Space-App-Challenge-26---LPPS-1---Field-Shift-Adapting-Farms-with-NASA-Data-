@@ -3,11 +3,11 @@
 **Continue from `PLAN.md`.** Milestone 1 is done. Start with the next unchecked milestone.
 
 ## Architecture
-- Vite + React SPA. `src/App.jsx` holds the route map, kept from the original Base44 export. Don't restructure the routes.
-- `src/lib/AuthContext.jsx` is the auth provider. Its context shape (`isLoadingAuth`, `isLoadingPublicSettings`, `authError`, `navigateToLogin`, `user`, `login`, `register`, `logout`, `updateUser`) matches what the original app consumed.
+- Vite + React SPA. `src/App.jsx` holds the route map, kept from our first (Base44) version, built during the hackathon. Don't restructure the routes.
+- `src/lib/AuthContext.jsx` is the auth provider. Its context shape (`isLoadingAuth`, `isLoadingPublicSettings`, `authError`, `navigateToLogin`, `user`, `login`, `register`, `logout`, `updateUser`) matches what our first (Base44) version used.
 - `src/api/kisanClient.js` is the **only** data access layer. It has an entity-style API (`kisan.entities.Task.list()`) plus `kisan.services.*`. It reads from `src/data/fixtures.js` and localStorage today. Backend milestones replace its internals with `fetch('/api/…')` and must keep the response shapes.
 - `src/hooks/useKisanData.js` wraps the client in TanStack Query hooks. Pages use these hooks and never call the client directly, except `Assistant` and the reset button in `Settings`.
-- `src/components/dashboard/*` contains the Dashboard panels. `DashboardHeader.jsx` and `AuthLayout.jsx` are original files.
+- `src/components/dashboard/*` contains the Dashboard panels. `DashboardHeader.jsx` and `AuthLayout.jsx` are from our first (Base44) version.
 
 - Geography: `db/geo/pakistan.mjs` is the reviewed seed for every district of Pakistan. `server/lib/geo.mjs` serves it in memory for `/api/geo`, `/api/weather` and the assistant (no database). To change districts or tehsils, edit the file, bump `GEO_DATASET_VERSION` and redeploy. Don't hand-write district lists anywhere else; use `useGeo*` hooks or `LocationPicker`. `src/lib/geoLocal.js` is a client-side fallback built from the same file.
 - Identity: the session (`kisan-session`) holds only `{ id, email, role, onboarded }`; each email maps to a stable account id. All client data is stored per account as `kisan-data:<user_id>:<key>`; call `kisan.setActiveUser()` when the account changes. The farmer's name is `profile.display_name` (`full_name` is a legacy alias kept in sync); use `displayNameOf`/`initialsOf`/`greetingName` from `src/lib/profile.js`. Never derive a name from the email. Profile updates can't change `user_id`/`email`, and they aren't sent to the AI.
@@ -22,8 +22,8 @@
 - Shared form inputs are in `components/FormField.jsx`.
 
 ## Non-obvious decisions
-- Only part of the Base44 export was available. The missing pages were rebuilt in the original design language. If the originals arrive, compare them and restore any lost behaviour without reintroducing Base44.
-- shadcn `ui/` components weren't received, so the screens use plain Tailwind. Adding shadcn components is fine (`components.json` is configured).
+- The app was started on Base44 during the hackathon. When we moved it off Base44, only some of our files came through (very poor connection); the rest were rebuilt in the same design language. If the missing files turn up, compare them and restore any lost behaviour without reintroducing Base44.
+- shadcn `ui/` components didn't come through, so the screens use plain Tailwind. Adding shadcn components is fine (`components.json` is configured).
 - Voice: recording happens in the browser (MediaRecorder, `src/lib/voice.js`), speech recognition runs server-side at `/api/transcribe` (Gemini through AI Gateway), and spoken replies use browser speechSynthesis. Browser SpeechRecognition isn't used because it is unreliable for Urdu and missing in Firefox.
 - Assistant: `/api/assistant` uses Gemini by default (Claude optional) and streams NDJSON (`text`/`status`/`done`/`error`). Thinking tokens count against `max_tokens`. Effort is `low` and there's a 50 s deadline, so long answers end with `stop: max_tokens` and the UI shows "Continue answer".
 - Language: `src/lib/language.js` (`detectLanguage`, `replyLanguage`) is shared by the browser and `/api/assistant`. It tells apart Urdu script, Roman Urdu, Shahmukhi/Roman Punjabi, Sindhi, Pashto and English. The assistant adds a per-turn "Reply language" note after the cached system prompt. `URDU_GUIDE` in `server/lib/prompt.mjs` holds the Pakistani Urdu style rules and farming glossary. Run `npm run test:language` after changing the detector, and `npm run qa:urdu` (needs `netlify dev` or `BASE_URL`) after changing prompts.

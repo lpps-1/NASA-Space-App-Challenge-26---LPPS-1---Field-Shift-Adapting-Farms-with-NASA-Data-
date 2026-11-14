@@ -27,7 +27,7 @@ import { GOOGLE_CLIENT_ID, googleAccessToken, verifyGoogle } from '@/lib/googleS
  * falls back to local accounts stored in this browser, and "Explore the demo
  * farm" always uses a local account.
  *
- * Context shape (kept from the original app): isLoadingAuth,
+ * Context shape (kept from our first Base44 version): isLoadingAuth,
  * isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated,
  * login, register, logout, updateUser — plus loginWithGoogle, enterDemo,
  * requestPasswordReset, setNewPassword, identity and authNotice.

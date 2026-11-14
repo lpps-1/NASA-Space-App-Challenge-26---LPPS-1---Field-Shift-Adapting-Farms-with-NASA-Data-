@@ -2,7 +2,7 @@
 
 | Feature | Status | Notes |
 | --- | --- | --- |
-| Theme, light/dark, Urdu typography | ✅ Live | Original `index.css` preserved |
+| Theme, light/dark, Urdu typography | ✅ Live | `index.css` from our first (Base44) version kept |
 | Sign in / register / forgot / reset | ✅ Live | Netlify Identity incl. Google sign-in (setup steps in README); local fallback + demo farm |
 | Farm setup after sign-in | ✅ Live | Land, water, crops, rotation, goals; used by Kisan AI |
 | Dashboard (greeting, weather, alerts, tasks, fields, recommendations) | ✅ Live | Live district weather |

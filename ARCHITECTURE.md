@@ -2,7 +2,7 @@
 
 ```
 Browser (Vite + React SPA)
- ├─ App.jsx ── routes (preserved from original)
+ ├─ App.jsx ── routes (kept from our first Base44 version)
  │    ├─ public: Login, Register, ForgotPassword, ResetPassword, Mfa  (AuthLayout)
  │    └─ protected (ProtectedRoute → Layout): Dashboard, Assistant, Onboarding,
  │         Profile, Tools, Calendar, Settings, KnowledgeAdmin

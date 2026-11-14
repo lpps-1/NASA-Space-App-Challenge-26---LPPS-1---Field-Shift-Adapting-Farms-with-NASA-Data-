@@ -3,7 +3,7 @@
 Each milestone is small and self-contained. Pages talk only to `src/api/kisanClient.js` and `src/lib/AuthContext.jsx`, so each backend milestone swaps the internals of those files and leaves the screens alone.
 
 ## ✅ Milestone 1 — Independent product surface
-Base44 SDK and Vite plugin removed. Every original route was rebuilt in the original design system and runs on stubbed data (`src/data/fixtures.js`): auth screens, Dashboard, Assistant with voice, Onboarding, Profile, Tools, Calendar, Settings and Knowledge base. The app deploys to Netlify as a static SPA.
+Base44 SDK and Vite plugin removed. Every route from our first (Base44) version was rebuilt in the same design system and runs on stubbed data (`src/data/fixtures.js`): auth screens, Dashboard, Assistant with voice, Onboarding, Profile, Tools, Calendar, Settings and Knowledge base. The app deploys to Netlify as a static SPA.
 
 ## ✅ Pakistan geography (part of 2 and 6, done ahead)
 - `db/geo/pakistan.mjs`: all 7 provinces/territories, 38 divisions, 168 districts with HQ coordinates, 580 tehsils/talukas, served in memory by `server/lib/geo.mjs` (Netlify Database was removed: it isn't available on this account's plan).

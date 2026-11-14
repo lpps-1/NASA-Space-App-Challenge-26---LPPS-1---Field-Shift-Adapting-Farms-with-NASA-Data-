@@ -15,6 +15,6 @@
 
 1. Change only the internals of `kisanClient.js` (and `AuthContext.jsx` for auth). Pages and hooks stay untouched.
 2. Keep response shapes identical to the fixtures so no screen needs to change.
-3. If the original Base44 page files turn up later, diff them against the rebuilt pages and bring back any behaviour that was lost.
+3. If the page files from our first (Base44) version turn up later, diff them against the rebuilt pages and bring back any behaviour that was lost.
 
 The step-by-step roadmap is in **PLAN.md**.
