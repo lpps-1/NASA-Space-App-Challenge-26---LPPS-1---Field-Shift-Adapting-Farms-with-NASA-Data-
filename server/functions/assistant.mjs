@@ -3,7 +3,7 @@ import { gemini } from "../lib/gemini.mjs";
 import { buildSystemPrompt, languageDirective } from "../lib/prompt.mjs";
 import { replyLanguage } from "../../src/lib/language.js";
 import { getWeather, weatherTool } from "../lib/weather.mjs";
-import { evidenceBlock, farmEvidence } from "../lib/farmData.mjs";
+import { farmDataFor, farmDataTool } from "../lib/farmData.mjs";
 
 /**
  * POST /api/assistant
@@ -90,7 +90,9 @@ function sanitizeContext(body) {
         .map((k) => ({ ...k, title: clean(k.title, 200), body: clean(k.body, 3000) }))
     : [];
   const appLang = ["en", "ur", "pa"].includes(body.app_lang) ? body.app_lang : null;
-  return { profile, fields, knowledge, voice: body.voice === true, appLang };
+  // The farm figures the website shows (built in the browser), read by the get_farm_data tool.
+  const siteData = clean(body.site_data, 8000) || null;
+  return { profile, fields, knowledge, voice: body.voice === true, appLang, siteData };
 }
 
 /** Claude (Anthropic) with the weather tool. Returns the stop reason. */
@@ -107,7 +109,7 @@ async function runClaude({ system, directive, convo, voice, signal, onText, runT
           { type: "text", text: system, cache_control: { type: "ephemeral" } },
           { type: "text", text: directive },
         ],
-        tools: [weatherTool],
+        tools: [weatherTool, farmDataTool],
         messages: convo,
       },
       { signal }
@@ -131,6 +133,11 @@ const GEMINI_WEATHER = {
   description: weatherTool.description,
   parametersJsonSchema: weatherTool.input_schema,
 };
+const GEMINI_FARM = {
+  name: farmDataTool.name,
+  description: farmDataTool.description,
+  parametersJsonSchema: farmDataTool.input_schema,
+};
 
 /**
  * Gemini with the weather tool. Returns "end_turn" or "max_tokens".
@@ -146,7 +153,7 @@ async function runGemini({ system, directive, convo, voice, signal, onText, runT
       contents,
       config: {
         systemInstruction: `${system}\n\n${directive}`,
-        tools: [{ functionDeclarations: [GEMINI_WEATHER] }],
+        tools: [{ functionDeclarations: [GEMINI_WEATHER, GEMINI_FARM] }],
         maxOutputTokens: voice ? 3000 : 12000,
         temperature: 0.4,
         thinkingConfig: { thinkingLevel: "LOW" },
@@ -201,22 +208,39 @@ function isBusyError(err) {
  * Kisan AI down. Before any text has been sent, a busy error moves on to the next
  * model in KISAN_CHAT_FALLBACK_MODELS (comma-separated; set it to "" to turn this off).
  */
-const FALLBACK_MODELS = (process.env.KISAN_CHAT_FALLBACK_MODELS ?? "gemini-flash-latest,gemini-flash-lite-latest")
+// Free keys: about 20 chat requests a day on the main model, and the bigger models are often
+// "high demand". The Lite models have their own quota and are usually free, so they come first.
+const FALLBACK_MODELS = (process.env.KISAN_CHAT_FALLBACK_MODELS ?? "gemini-3.5-flash-lite,gemini-flash-lite-latest,gemini-flash-latest")
   .split(",")
   .map((m) => m.trim())
   .filter((m) => m && m !== MODEL);
+const FIRST_TEXT_MS = 18000; // a model that hasn't started answering by then is treated as busy
 
 async function runGeminiWithFallback(args, hasSentText) {
   const models = [MODEL, ...FALLBACK_MODELS];
   let lastErr;
   for (const model of models) {
+    // Give each model a limited time to start answering, so one stuck model doesn't use up the
+    // whole 50-second budget (that was the "took too long" error).
+    const attempt = new AbortController();
+    const stopAll = () => attempt.abort();
+    args.signal.addEventListener("abort", stopAll, { once: true });
+    const timer = setTimeout(() => !hasSentText() && attempt.abort(), FIRST_TEXT_MS);
     try {
-      return await runGemini({ ...args, model });
+      return await runGemini({ ...args, signal: attempt.signal, model });
     } catch (err) {
       lastErr = err;
+      const stalled = attempt.signal.aborted && !args.signal.aborted && !hasSentText();
+      if (stalled) {
+        console.warn("gemini slow to start, trying next model", model);
+        continue;
+      }
       if (!isBusyError(err) || hasSentText() || args.signal.aborted) throw err;
       console.warn("gemini busy, trying next model", model, err?.status, err?.message?.slice(0, 120));
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 300));
+    } finally {
+      clearTimeout(timer);
+      args.signal.removeEventListener("abort", stopAll);
     }
   }
   throw lastErr;
@@ -244,11 +268,8 @@ export default async (req) => {
   // The app is set to Urdu or Punjabi but the message is English (e.g. a question the app wrote for a
   // dashboard button): answer in the app's language. Roman Urdu and Urdu messages are untouched.
   if (lang?.code === "en" && (ctx.appLang === "ur" || ctx.appLang === "pa")) lang = { ...lang, code: ctx.appLang, source: "app" };
-  // Ground the answer in the farm's NASA and government data (fetched now, in parallel, with short limits).
-  const evidence = await farmEvidence(ctx.profile).catch(() => null);
-  const directive = `${evidenceBlock(evidence)}
-
-${languageDirective(lang, { voice: ctx.voice })}`;
+  // Farm data is fetched only when the model asks for it (get_farm_data), not before every question.
+  const directive = languageDirective(lang, { voice: ctx.voice });
 
   const encoder = new TextEncoder();
   const abort = new AbortController();
@@ -267,12 +288,15 @@ ${languageDirective(lang, { voice: ctx.voice })}`;
       const convo = [...history];
       let stop = "end_turn";
       let sentText = false;
-      // Spoken Punjabi / Roman Urdu is answered in Urdu script (see languageDirective), so the voice is chosen for that.
-      const spokenCode = ctx.voice && /^(pa|ur-Latn)/.test(lang.code || "") ? "ur" : lang.code;
+      // Spoken Roman Urdu is answered in Urdu script; spoken Punjabi is answered in Shahmukhi Punjabi
+      // (read by the Urdu voice). See languageDirective.
+      const spokenCode = ctx.voice && /^ur-Latn/.test(lang.code || "") ? "ur" : ctx.voice && /^pa/.test(lang.code || "") ? "pa" : lang.code;
       send({ type: "language", value: spokenCode });
       const runTool = async (name, input) => {
-        send({ type: "status", value: name === "get_weather" ? "weather" : name });
-        return name === "get_weather" ? await getWeather(input || {}) : { error: `Unknown tool ${name}` };
+        send({ type: "status", value: name === "get_weather" ? "weather" : name === "get_farm_data" ? "farm" : name });
+        if (name === "get_weather") return await getWeather(input || {});
+        if (name === "get_farm_data") return await farmDataFor({ profile: ctx.profile, siteData: ctx.siteData });
+        return { error: `Unknown tool ${name}` };
       };
       // The model sometimes copies the internal "Reply language for this turn" note into its answer
       // (often after a "---" line). Hold back anything that could be the start of it and drop it.

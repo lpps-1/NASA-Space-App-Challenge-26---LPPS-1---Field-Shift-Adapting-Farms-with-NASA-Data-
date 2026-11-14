@@ -6,12 +6,15 @@ import FormField, { inputClass } from "@/components/FormField";
 import { FALLBACK_RATES, FERTILIZER_GUIDE, INPUT_PRICES, INPUT_PRICES_AS_OF, SEED_PRICES, TOOL_REGIONS, TOOLS, US_INPUT_PRICES_USD, US_SEED_PRICES_USD } from "@/data/fixtures";
 import Flag from "@/components/Flag";
 import { useProfile, useSettings, useUpdateSettings } from "@/hooks/useKisanData";
-import { IrrigationTool, ProblemTool, SchemesTool } from "@/components/tools/ExtraTools";
+import { SchemesTool } from "@/components/tools/ExtraTools";
+import { fromMaunds, toMaunds, unitLabel, yieldUnit } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { cropLabel } from "@/lib/cropNames";
 import { useT } from "@/i18n";
 
 const ICONS = { FlaskConical, Wheat, Droplets, Calculator, ScanLine, Landmark };
+// Being finished: shown as "Soon" and not clickable yet.
+const SOON = new Set(["irrigation", "disease"]);
 const CROPS = Object.keys(FERTILIZER_GUIDE);
 const CURRENCIES = [
   { id: "PKR", label: "PKR (Rs)" },
@@ -92,8 +95,8 @@ function CropAcreInputs({ crop, setCrop, acres, setAcres }) {
   );
 }
 
-function ToolPanel({ id, m, regionName, avg, seedAvg }) {
-  const { t } = useT();
+function ToolPanel({ id, m, regionName, avg, seedAvg, country }) {
+  const { t, lang } = useT();
   const [crop, setCrop] = useState("Wheat");
   const [acres, setAcres] = useState(6);
   const [yieldMaunds, setYield] = useState(45);
@@ -113,9 +116,8 @@ function ToolPanel({ id, m, regionName, avg, seedAvg }) {
     return { urea, dap, sop, cost: urea * price("urea") + dap * price("dap") + sop * price("sop") };
   }, [g, acres, own, avg]);
 
-  if (id === "irrigation") return <IrrigationTool />;
-  if (id === "disease") return <ProblemTool />;
-  if (id === "loan") return <SchemesTool />;
+  if (id === "loan") return <SchemesTool country={country} />;
+  const unit = yieldUnit(settings, lang, country);
 
   if (id === "fertilizer") {
     const rows = [
@@ -206,11 +208,17 @@ function ToolPanel({ id, m, regionName, avg, seedAvg }) {
       <>
         <CropAcreInputs {...{ crop, setCrop, acres, setAcres }} />
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <FormField label={t("Expected yield (maunds per acre)")} type="number" min="0" value={yieldMaunds} onChange={(e) => setYield(Number(e.target.value))} />
-          <MoneyField label={t("Your expected sale price per 40 kg")} rs={salePrice} m={m} onChange={setSalePrice} />
+          <FormField
+            label={t("Expected yield ({unit} per acre)", { unit: unitLabel(unit, t) })}
+            type="number"
+            min="0"
+            value={Math.round(fromMaunds(yieldMaunds, unit) * 10) / 10}
+            onChange={(e) => setYield(toMaunds(Number(e.target.value), unit))}
+          />
+          <MoneyField label={t("Your expected sale price per {unit}", { unit: unitLabel(unit, t) })} rs={Math.round(salePrice / fromMaunds(1, unit))} m={m} onChange={(v) => setSalePrice(v * fromMaunds(1, unit))} />
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Result label={t("Income")} value={rs(income)} sub={t("at {price} per 40 kg", { price: rs(price) })} />
+          <Result label={t("Income")} value={rs(income)} sub={t("at {price} per {unit}", { price: rs(price / fromMaunds(1, unit)), unit: unitLabel(unit, t) })} />
           <Result label={t("Input cost")} value={rs(cost)} sub={t("fertilizer + {price} per acre other costs", { price: rs(35000) })} />
           <Result label={t("Profit")} value={rs(income - cost)} />
         </div>
@@ -231,7 +239,7 @@ function regionFromProfile(p) {
 
 export default function Tools() {
   const { t } = useT();
-  const [active, setActive] = useState("irrigation");
+  const [active, setActive] = useState("fertilizer");
   const usesMoney = ["fertilizer", "seed", "profit"].includes(active);
   const tool = TOOLS.find((x) => x.id === active);
   const { data: profile } = useProfile();
@@ -295,7 +303,9 @@ export default function Tools() {
       </div>
       <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
         <ul className="grid content-start gap-1 self-start sm:grid-cols-2 lg:sticky lg:top-6 lg:grid-cols-1">
-          {TOOLS.map((x) => {
+          {/* Ready tools first; the ones still being built ("Soon") at the bottom, switched off. */}
+          {[...TOOLS.filter((x) => !SOON.has(x.id) && !x.soon), ...TOOLS.filter((x) => SOON.has(x.id) || x.soon)].map((x0) => {
+            const x = SOON.has(x0.id) ? { ...x0, soon: true } : x0;
             const Icon = ICONS[x.icon];
             return (
               <li key={x.id}>
@@ -342,7 +352,7 @@ export default function Tools() {
             )}
           </div>
           {!usesMoney && <div className="mt-5" />}
-          <ToolPanel key={`${active}-${country}`} id={active} m={m} regionName={regionName} avg={avg} seedAvg={seedAvg} />
+          <ToolPanel key={`${active}-${country}`} id={active} m={m} regionName={regionName} avg={avg} seedAvg={seedAvg} country={country} />
         </section>
       </div>
     </>

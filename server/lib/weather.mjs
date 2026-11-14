@@ -15,7 +15,7 @@ const WMO = {
 export const weatherTool = {
   name: "get_weather",
   description:
-    "Get the live current weather and a 7-day forecast (temperature, rain, humidity, wind, reference evapotranspiration ET0) for a place in Pakistan from Open-Meteo. Use it whenever advice depends on weather: irrigation timing, spraying, fertilizer top-dressing, sowing, harvesting, frost or heat stress.",
+    "Get the live current weather and a 7-day forecast (temperature, rain, humidity, wind, reference evapotranspiration ET0) for a place in Pakistan from Open-Meteo. Use it only when the advice depends on the coming days' weather: irrigation timing, spraying, fertilizer top-dressing, sowing, harvesting, frost or heat stress. Never for greetings or small talk.",
   input_schema: {
     type: "object",
     properties: {

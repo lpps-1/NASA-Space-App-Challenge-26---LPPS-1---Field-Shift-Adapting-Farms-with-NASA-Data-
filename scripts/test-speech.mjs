@@ -124,7 +124,8 @@ await scenario("Urdu greeting is spoken by the native Urdu voice (Edge)", async 
   const spoken = installSynth({ voices: VOICE_SETS.edge });
   const v = await fresh();
   const r = await runReply(v, [GREETING], { lang: "ur" });
-  assert.equal(r.spoken, 2, `expected 2 utterances, got ${r.spoken}`);
+  // Short sentences are joined into one utterance (no long pause after every full stop).
+  assert.equal(r.spoken, 1, `expected 1 joined utterance, got ${r.spoken}`);
   assert.ok(spoken.every((s) => s.voice.includes("Urdu")), "Urdu reply used a non-Urdu voice");
   assert.ok(spoken.every((s) => s.lang === "ur-PK"));
 });
@@ -154,7 +155,7 @@ await scenario("Hindi-only device: offline transliteration when /api/speech-text
     throw new Error("offline");
   };
   const r = await runReply(v, [GREETING], { lang: "ur", prepare, onMissingVoice: () => {} });
-  assert.equal(r.spoken, 2);
+  assert.equal(r.spoken, 1);
   assert.ok(spoken.every((s) => /[ऀ-ॿ]/.test(s.text) && !/[؀-ۿ]/.test(s.text)), JSON.stringify(spoken));
   assert.match(spoken[0].text, /अलैकुम/);
 });
@@ -173,7 +174,8 @@ await scenario("English reply uses an English voice", async () => {
   const spoken = installSynth({ voices: VOICE_SETS.edge });
   const v = await fresh();
   const r = await runReply(v, ["Irrigate wheat 20–25 days after sowing. Then every 3 weeks."], { lang: "en" });
-  assert.equal(r.spoken, 2);
+  assert.equal(r.spoken, 1); // both short sentences in one utterance
+  assert.match(spoken[0].text, /Then every 3 weeks/);
   assert.ok(spoken.every((s) => s.voice.includes("English")));
   assert.match(spoken[0].text, /20 to 25/);
 });

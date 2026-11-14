@@ -357,11 +357,11 @@ export const kisan = {
      * Calls onText(delta) as text arrives and onStatus("weather") while a tool runs.
      * Resolves to { role: "assistant", content, stop }.
      */
-    async askAssistant({ messages, profile, fields, knowledge, voice = false, appLang, signal, onText, onStatus, onLanguage }) {
+    async askAssistant({ messages, profile, fields, knowledge, siteData, voice = false, appLang, signal, onText, onStatus, onLanguage }) {
       const res = await fetch("/api/assistant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, profile, fields, knowledge, voice, app_lang: appLang }),
+        body: JSON.stringify({ messages, profile, fields, knowledge, voice, app_lang: appLang, site_data: siteData || undefined }),
         signal,
       });
       if (!res.ok || !res.body) {

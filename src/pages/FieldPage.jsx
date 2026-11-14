@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import FormField, { PrimaryButton, inputClass } from "@/components/FormField";
 import { IrrigationPicker } from "@/components/FarmChoices";
 import { cropGroupsFor, GROW_TYPES, IRRIGATION_OPTIONS, SOIL_OPTIONS, TYPICAL_YIELD } from "@/data/fixtures";
-import { useEntityMutations, useFields, useProfile } from "@/hooks/useKisanData";
+import { useEntityMutations, useFields, useProfile, useSettings } from "@/hooks/useKisanData";
+import { formatYield, yieldUnit } from "@/lib/units";
 import { useT } from "@/i18n";
 import { cropLabel } from "@/lib/cropNames";
 import { estimateStage } from "@/lib/fieldStage";
@@ -27,6 +28,7 @@ export default function FieldPage() {
   const { t, lang } = useT();
   const { data: fields } = useFields();
   const { data: profile } = useProfile();
+  const { data: settings } = useSettings();
   const GROUPS = cropGroupsFor(profile?.country);
   const ops = useEntityMutations("Field", "fields");
   const field = useMemo(() => (fields || []).find((f) => f.id === id), [fields, id]);
@@ -206,7 +208,7 @@ export default function FieldPage() {
           <p className="mt-1 text-xs text-muted-foreground">{t("Worked out from the sowing date and typical yields in Pakistan, not measured.")}</p>
           <dl className="mt-2">
             {row(t("Estimated stage"), est ? `${t(est.stage)}${est.day != null && est.day >= 0 ? ` (${t("day {d} of about {n}", { d: est.day, n: est.of })})` : ""}` : null)}
-            {row(t("Estimated harvest"), yieldEst ? `${t("{n} maunds", { n: yieldEst.toLocaleString("en-PK") })} \u2068(${((yieldEst * 40) / 1000).toFixed(1)} t)\u2069` : null)}
+            {row(t("Estimated harvest"), yieldEst ? `${formatYield(yieldEst, yieldUnit(settings, lang, profile?.country), t)} \u2068(${((yieldEst * 40) / 1000).toFixed(1)} t)\u2069` : null)}
           </dl>
           <Link to={`/chat?q=${encodeURIComponent(question)}`} className="kisan-btn-primary mt-5 w-full focus-ring">
             <MessagesSquare className="h-4 w-4" /> {t("Ask Kisan AI about this field")}

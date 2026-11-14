@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Polygon, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Polygon, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Globe2, LocateFixed, Mountain, Satellite } from "lucide-react";
@@ -25,6 +25,8 @@ export const NASA_LAYERS = [
     what: "Green = growing crops or trees; brown = bare or dry land. Shows which months fields stand bare.",
     url: GIBS("MODIS_Terra_NDVI_8Day", "GoogleMapsCompatible_Level9"),
     max: 9,
+    legend: "https://gibs.earthdata.nasa.gov/legends/MODIS_NDVI_H.svg",
+    key: [["#a0522d", "Brown: bare or very dry land (NDVI near 0)"], ["#d9e36b", "Light green: thin or young crops"], ["#1f7a2e", "Dark green: dense, healthy crops or trees (NDVI near 1)"]],
   },
   {
     id: "smap",
@@ -33,6 +35,8 @@ export const NASA_LAYERS = [
     what: "Water in the top metre of soil. Blue = wet, brown = dry. Early sign of drought stress.",
     url: GIBS("SMAP_L4_Analyzed_Root_Zone_Soil_Moisture", "GoogleMapsCompatible_Level6"),
     max: 6,
+    legend: "https://gibs.earthdata.nasa.gov/legends/SMAP_Analyzed_Soil_Moisture_H.svg",
+    key: [["#c8a165", "Tan / yellow: dry soil, crops may need water"], ["#5fb36b", "Green: moist soil"], ["#2b6cb0", "Blue: wet or waterlogged soil"]],
   },
   {
     id: "rain",
@@ -41,6 +45,8 @@ export const NASA_LAYERS = [
     what: "Rain falling across the region on the latest day. Brighter = heavier rain.",
     url: GIBS("IMERG_Precipitation_Rate", "GoogleMapsCompatible_Level6"),
     max: 6,
+    legend: "https://gibs.earthdata.nasa.gov/legends/GPM_Precipitation_Rate_H.svg",
+    key: [["#9ecae1", "Light blue: light rain"], ["#41ab5d", "Green / yellow: moderate rain"], ["#e34a33", "Orange / red: heavy rain"], ["transparent", "No colour: no rain on the latest day"]],
   },
   {
     id: "heat",
@@ -49,6 +55,8 @@ export const NASA_LAYERS = [
     what: "How hot the ground surface is in the daytime. Red = heat stress risk for shallow-rooted crops.",
     url: GIBS("MODIS_Terra_Land_Surface_Temp_Day", "GoogleMapsCompatible_Level7"),
     max: 7,
+    legend: "https://gibs.earthdata.nasa.gov/legends/MODIS_Land_Surface_Temp_H.svg",
+    key: [["#3b6fb6", "Blue: cool ground"], ["#f2c94c", "Yellow / orange: warm ground"], ["#c0392b", "Red: hot ground, heat-stress risk"], ["transparent", "Gaps: clouds hid the ground"]],
   },
   {
     id: "landsat",
@@ -57,6 +65,8 @@ export const NASA_LAYERS = [
     what: "A real-colour satellite photo of the fields. Gaps are cloud or no pass yet.",
     url: GIBS("HLS_L30_Nadir_BRDF_Adjusted_Reflectance", "GoogleMapsCompatible_Level12"),
     max: 12,
+    legend: null,
+    key: [["#3d8b3d", "Green: crops, trees, grass"], ["#a67c52", "Brown: bare soil, dry fields"], ["#ffffff", "White: clouds or haze"], ["transparent", "Gaps: no satellite pass yet"]],
   },
   {
     id: "grace",
@@ -65,6 +75,8 @@ export const NASA_LAYERS = [
     what: "Change in all water stored underground and on land. Red = less water than usual.",
     url: GIBS("GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI", "GoogleMapsCompatible_Level6"),
     max: 6,
+    legend: "https://gibs.earthdata.nasa.gov/legends/GRACE_Tellus_Liquid_Water_Equivalent_Thickness_Mascon_CRI_H.svg",
+    key: [["#b2182b", "Red: less water stored than usual (groundwater falling)"], ["#f7f7f7", "White: about normal"], ["#2166ac", "Blue: more water stored than usual"]],
   },
 ];
 
@@ -155,20 +167,23 @@ export default function FarmMap({ className }) {
         ))}
       </div>
 
-      <div className="relative mt-3 h-[26rem] overflow-hidden rounded-xl border [border-color:var(--card-line)] sm:h-[30rem]">
+      <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="relative h-[26rem] overflow-hidden rounded-xl border [border-color:var(--card-line)] sm:h-[30rem]">
         <MapContainer
           {...(start.bounds ? { bounds: start.bounds } : { center: start.center, zoom: start.zoom })}
-          minZoom={2}
-          maxZoom={13}
+          minZoom={3}
+          maxZoom={11}
           worldCopyJump
-          scrollWheelZoom={false}
+          scrollWheelZoom="center"
+          wheelPxPerZoomLevel={120}
+          zoomSnap={1}
           className="h-full w-full bg-secondary"
           attributionControl
         >
           <TileLayer key={base} url={base} maxNativeZoom={8} maxZoom={19} attribution="NASA Blue Marble / Black Marble (GIBS)" />
-          <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" />
+          <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
           {/* Grey out every country the app doesn't cover yet. */}
-          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1c2220" : "#9ca3a0", fillOpacity: 0.94 }} interactive={false} />
+          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1f2523" : "#a3aaa7", fillOpacity: 1 }} interactive={false} />
           <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
           <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
           {hasPoint && (
@@ -177,6 +192,8 @@ export default function FarmMap({ className }) {
             </CircleMarker>
           )}
           <FlyTo target={target} />
+          {/* Map scale (like Google Maps): metric and miles. */}
+          <ScaleControl position="bottomright" imperial metric />
         </MapContainer>
 
         {/* Quick views, on top of the map. */}
@@ -197,6 +214,30 @@ export default function FarmMap({ className }) {
           <Globe2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           {t("Kisan AI covers Pakistan and the United States only. Other countries are greyed out.")}
         </p>
+      </div>
+        <aside className="rounded-xl border p-4 text-sm [border-color:var(--card-line)]" aria-label={t("Map legend")} data-testid="map-legend">
+          <p className="font-semibold">{t(layer.name)}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{layer.mission}</p>
+          {layer.legend && (
+            <img src={layer.legend} alt={t("NASA colour scale for this layer")} className="mt-3 w-full rounded-md bg-white p-1.5" loading="lazy" />
+          )}
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("What the colours mean")}</p>
+          <ul className="mt-2 space-y-2">
+            {layer.key.map(([color, text]) => (
+              <li key={text} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                <span className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-sm border border-foreground/20" style={{ background: color === "transparent" ? "repeating-linear-gradient(45deg, transparent 0 3px, hsl(var(--muted-foreground) / 0.4) 3px 4px)" : color }} />
+                <span>{t(text)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("On the map")}</p>
+          <ul className="mt-2 space-y-2 text-xs">
+            <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-full border-[3px] border-harvest bg-forest" />{t("Your farm")}</li>
+            <li className="flex items-center gap-2.5"><span className="h-0.5 w-3.5 bg-harvest" />{t("Pakistan and United States border")}</li>
+            <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#1f2523] dark:bg-[#1f2523]" style={{ background: theme === "dark" ? "#1f2523" : "#a3aaa7" }} />{t("Countries not covered yet")}</li>
+          </ul>
+          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">{t("Scroll or use + and − to zoom. The bar in the corner shows distance. Data pixels are coarser than a field, so very close zoom only enlarges them.")}</p>
+        </aside>
       </div>
       {!hasPoint && <p className="mt-2 text-xs text-muted-foreground">{t("Set your farm location under My farm to see your farm on the map.")}</p>}
 

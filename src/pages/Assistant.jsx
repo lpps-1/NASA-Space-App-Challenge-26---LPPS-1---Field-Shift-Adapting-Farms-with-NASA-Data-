@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
+import * as LangMenu from "@radix-ui/react-dropdown-menu";
 import remarkGfm from "remark-gfm";
 import {
   AlertCircle,
   ArrowRight,
   AudioLines,
+  Check,
+  ChevronDown,
   ClipboardList,
   PanelRight,
   CloudSun,
+  Satellite,
   Languages,
   Loader2,
   Mic,
@@ -26,10 +30,15 @@ import {
   useEntityMutations,
   useFields,
   useKnowledge,
+  useClimate,
+  useNasa,
   useProfile,
   useSettings,
+  useSoilSurvey,
+  useTerrain,
   useUpdateSettings,
 } from "@/hooks/useKisanData";
+import { buildSiteData } from "@/lib/siteData";
 import {
   createSpeaker,
   micErrorMessage,
@@ -127,6 +136,10 @@ function Message({ msg, speaking, saved, onSpeak, onStopSpeaking, onRetry, onCon
               {msg.status === "weather" ? (
                 <span className="soft-pulse inline-flex items-center gap-1.5">
                   <CloudSun className="h-4 w-4" /> {t("Checking live weather…")}
+                </span>
+              ) : msg.status === "farm" ? (
+                <span className="soft-pulse inline-flex items-center gap-1.5">
+                  <Satellite className="h-4 w-4" /> {t("Reading your farm's NASA data…")}
                 </span>
               ) : (
                 <TypingDots />
@@ -365,6 +378,13 @@ export default function Assistant() {
     [speaker]
   );
 
+  // The farm figures the website shows, for the get_farm_data tool (read only when a question needs them).
+  const { data: climate } = useClimate();
+  const { data: nasa } = useNasa();
+  const { data: terrain } = useTerrain();
+  const { data: usda } = useSoilSurvey();
+  const siteData = useMemo(() => buildSiteData({ profile, climate, nasa, terrain, usda }), [profile, climate, nasa, terrain, usda]);
+
   const context = useMemo(() => {
     // Identity fields (email, account id) never go to the AI; the display name does.
     const { email: _e, user_id: _u, ...rest } = profile || {};
@@ -372,8 +392,9 @@ export default function Assistant() {
       profile: profile ? rest : null,
       fields: fields || [],
       knowledge: (knowledge || []).filter((k) => k.status === "published"),
+      siteData,
     };
-  }, [profile, fields, knowledge]);
+  }, [profile, fields, knowledge, siteData]);
 
   const saveConversation = useCallback(
     async (msgs) => {
@@ -832,7 +853,7 @@ export default function Assistant() {
           </button>
         </div>
 
-        <div className={cn("mx-auto w-full max-w-3xl flex-1", messages.length === 0 ? "flex flex-col justify-center pb-6" : "space-y-7 py-8")} aria-live="polite">
+        <div className={cn("mx-auto w-full max-w-4xl flex-1", messages.length === 0 ? "flex flex-col justify-center pb-6" : "space-y-7 py-8")} aria-live="polite">
           {messages.length === 0 && (
             <div className="px-1" data-testid="chat-welcome">
               <h1 className="kisan-greeting font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl" dir="auto">
@@ -877,7 +898,7 @@ export default function Assistant() {
           <div ref={endRef} />
         </div>
 
-        <div className="sticky bottom-0 mx-auto w-full max-w-3xl bg-background pb-4 pt-2 lg:pb-6">
+        <div className="sticky bottom-0 mx-auto w-full max-w-4xl bg-background pb-4 pt-2 lg:pb-6">
           {voiceNotice && !voiceError && (
             <div
               role="alert"
@@ -981,23 +1002,36 @@ export default function Assistant() {
             <div className="mt-1 flex items-center gap-1 px-1">
             {/* Voice controls sit under the message box, like Claude's composer. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
-                <label className="inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-secondary">
-                  <Languages className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                  <span className="sr-only">{t("Speaking language")}</span>
-                  <select
-                    value={VOICE_LANGS.some((l) => l.value === voiceLang) ? voiceLang : voiceLang.startsWith("pa") ? "pa-PK" : "auto"}
-                    onChange={(e) => setVoiceLanguage(e.target.value)}
-                    className="cursor-pointer rounded bg-transparent py-1 pe-1 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                {/* Styled menu (the native <select> showed white text on a white list in dark mode). */}
+                <LangMenu.Root>
+                  <LangMenu.Trigger
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={t("Language you speak")}
                     data-testid="language-select"
                   >
-                    {VOICE_LANGS.map((l) => (
-                      <option key={l.value} value={l.value}>
-                        {uiLang === "en" ? l.label : l.native}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <Languages className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    {(() => {
+                      const cur = VOICE_LANGS.find((l) => l.value === voiceLang) || VOICE_LANGS.find((l) => voiceLang.startsWith("pa") && l.value === "pa-PK") || VOICE_LANGS[0];
+                      return uiLang === "en" ? cur.label : cur.native;
+                    })()}
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  </LangMenu.Trigger>
+                  <LangMenu.Portal>
+                    <LangMenu.Content side="top" align="start" sideOffset={6} className="kisan-menu z-50 min-w-[10rem] rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg">
+                      <p className="px-2.5 py-1.5 text-[11px] text-muted-foreground">{t("Language you speak")}</p>
+                      {VOICE_LANGS.map((l) => (
+                        <LangMenu.Item
+                          key={l.value}
+                          onSelect={() => setVoiceLanguage(l.value)}
+                          className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
+                        >
+                          {uiLang === "en" ? l.label : l.native}
+                          {l.value === voiceLang && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
+                        </LangMenu.Item>
+                      ))}
+                    </LangMenu.Content>
+                  </LangMenu.Portal>
+                </LangMenu.Root>
                 <button
                   onClick={toggleHandsFree}
                   className={cn(

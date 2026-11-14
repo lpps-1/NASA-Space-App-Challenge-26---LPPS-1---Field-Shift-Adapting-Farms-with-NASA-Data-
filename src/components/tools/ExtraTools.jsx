@@ -228,19 +228,27 @@ export function ProblemTool() {
 
 /* ───────────────────────── Government schemes ───────────────────────── */
 
-export function SchemesTool() {
+export function SchemesTool({ country } = {}) {
   const { t } = useT();
   const { data: profile } = useProfile();
   if (!profile) return null;
-  const list = SCHEMES[profile.country === "US" ? "US" : "PK"].filter((s) => s.near(profile));
+  const home = profile.country === "US" ? "US" : "PK";
+  const c = country || home;
+  // The farmer's own country: matched to their farm. The other country (picked for a demo): every programme.
+  const same = c === home;
+  const list = SCHEMES[c].filter((s) => (same ? s.near(profile) : true));
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
-        {t("Matched to your farm: {acres} acres in {place}.", { acres: profile.land_acres || 0, place: [profile.district, profile.province].filter(Boolean).join(", ") })}
+        {same
+          ? t("Matched to your farm: {acres} acres in {place}.", { acres: profile.land_acres || 0, place: [profile.district, profile.province].filter(Boolean).join(", ") })
+          : c === "US"
+            ? t("United States programmes (USDA). Your farm is in Pakistan, so none are matched to it.")
+            : t("Pakistan programmes. Your farm is in the United States, so none are matched to it.")}
       </p>
       <ul className="space-y-3">
         {list.map((s) => {
-          const fits = s.fits(profile);
+          const fits = same && s.fits(profile);
           return (
             <li key={s.id} className="rounded-2xl border p-4 [border-color:var(--card-line)]">
               <div className="flex flex-wrap items-start justify-between gap-2">

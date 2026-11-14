@@ -74,22 +74,21 @@ export async function farmEvidence(profile) {
   return { lines, missing };
 }
 
-/** The block added to Kisan AI's instructions for this turn. */
-export function evidenceBlock(ev) {
-  if (!ev) {
-    return `## Farm data\nThe farmer's location is not set, so no NASA or government data could be loaded. For questions that depend on local weather, climate or soil, say that setting the farm location under My farm lets you use NASA data for their exact area, and give only general guidance.`;
-  }
-  return [
-    "## Farm data (fetched live for this answer from the same sources the app shows)",
-    ...ev.lines,
-    ev.missing.length ? `- Not available right now: ${ev.missing.join(", ")}.` : "",
-    "",
-    "How to use it:",
-    "- When the answer depends on the farm's weather, rain, heat, frost, soil moisture, soil, water table or slope, base it on the numbers above and name the source in plain words (for example \"NASA's 20 years of climate data for your district shows…\" or \"the government soil survey for Punjab says…\").",
-    "- Never invent local figures. If a needed dataset is missing, say so briefly and give general guidance.",
-    "- Use general farming knowledge only for practices (seed rates, spray timing, varieties), and keep it consistent with the data above.",
-    "- For the forecast (next days), call get_weather.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+/**
+ * Tool: the farm's data as the website shows it. The browser sends the figures it already
+ * displays (Rotation, Data sources, dashboard) as `site_data`; that is used first. Only when it
+ * is missing are the sources fetched here.
+ */
+export const farmDataTool = {
+  name: "get_farm_data",
+  description:
+    "Get this farmer's own data exactly as the Kisan AI website shows it: NASA POWER 20-year climate and the last 30 days (rain, heat days, frost, soil moisture), NASA SRTM elevation and slope, the government soil survey, and the rotation planner's scores. Call it ONLY when the question depends on this farm's climate, rain history, heat, frost, soil, water table, slope, or which rotation fits. Do not call it for greetings, thanks, or general farming questions.",
+  input_schema: { type: "object", properties: {}, required: [] },
+};
+
+export async function farmDataFor({ profile, siteData }) {
+  if (siteData) return { source: "Kisan AI website (the figures the farmer sees)", data: siteData };
+  const ev = await farmEvidence(profile).catch(() => null);
+  if (!ev) return { error: "The farm location is not set, so there is no NASA or government data yet. Ask the farmer to set it under My farm." };
+  return { source: "NASA POWER, NASA SRTM and the government soil survey (fetched now)", data: ev.lines.join("\n"), missing: ev.missing };
 }

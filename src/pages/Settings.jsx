@@ -190,9 +190,9 @@ function Segmented({ value, options, onChange, label }) {
 const SECTIONS = [
   { id: "general", label: "Language", icon: Languages },
   { id: "voice", label: "Voice assistant", icon: Volume2 },
-  { id: "units", label: "Units and region", icon: Ruler },
+  { id: "units", label: "Unit & Region", icon: Ruler },
   { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "account", label: "Account and data", icon: UserRound },
+  { id: "account", label: "Account & Data", icon: UserRound },
 ];
 
 export default function SettingsDialog() {
@@ -267,9 +267,12 @@ export default function SettingsDialog() {
         />
       </Section>
   ) : active === "units" ? (
-      <Section id="units" icon={Ruler} title={t("Units and region")} hint={t("How numbers are shown.")}>
+      <Section id="units" icon={Ruler} title={t("Unit & Region")} hint={t("How numbers are shown.")}>
         <Row label={t("Temperature")} description={t("Used on the dashboard weather card.")}>
           <Segmented label={t("Temperature")} value={s.temp_unit === "f" ? "f" : "c"} onChange={set("temp_unit")} options={[{ value: "c", label: "°C" }, { value: "f", label: "°F" }]} />
+        </Row>
+        <Row label={t("Harvest weight")} description={t("Automatic shows maunds in Urdu and Punjabi, kilograms in English (pounds for US farms).")}>
+          <Segmented label={t("Harvest weight")} value={s.yield_unit || "auto"} onChange={set("yield_unit")} options={[{ value: "auto", label: t("Auto") }, { value: "maund", label: t("Maund") }, { value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} />
         </Row>
         <Row label={t("Country")} description={t("Sets the crops, seasons, soil survey and schemes the app uses.")}>
           <Link to="/profile" onClick={closeSettings} className="inline-flex items-center rounded-xl border px-4 py-2 text-sm hover:bg-secondary focus-ring [border-color:var(--card-line)]">{profile?.country === "US" ? t("United States") : t("Pakistan")} · {t("Change")}</Link>
@@ -293,7 +296,7 @@ export default function SettingsDialog() {
         </Row>
       </Section>
   ) : (
-      <Section id="account" icon={UserRound} title={t("Account and data")} hint={user?.email}>
+      <Section id="account" icon={UserRound} title={t("Account & Data")} hint={user?.email}>
         <Row label={t("Display name")} description={t("Shown on your dashboard and used by Kisan AI.")}>
                 <AccountInput label={t("Display name")} value={profile?.display_name} maxLength={60} dir="auto" data-testid="settings-name" onSave={(v) => v && saveProfile.mutate({ display_name: v }, { onSuccess: () => toast.success(t("Saved")) })} />
               </Row>

@@ -94,7 +94,7 @@ function ChatHistory() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="px-4 pb-1 pt-4 text-[11px] font-medium text-sidebar-foreground/50">{t("Recent chats")}</p>
+      <p className="px-[1.125rem] pb-1 pt-4 text-[11px] font-medium text-sidebar-foreground/50">{t("Recent chats")}</p>
       <ul className="min-h-0 flex-1 space-y-px overflow-y-auto px-2 pb-2" data-testid="chat-history">
         {recent.length === 0 && <li className="px-2.5 py-1 text-xs text-sidebar-foreground/50">{t("Your conversations appear here.")}</li>}
         {recent.map((c) => (

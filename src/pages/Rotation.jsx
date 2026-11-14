@@ -148,9 +148,10 @@ function Value({ children, win }) {
 function RowLabel({ icon: Icon, title, info, hint }) {
   const { t } = useT();
   return (
-    <span className="flex items-center gap-2.5">
+    // The "i" sits at the right edge of the column, so all of them line up in one straight line.
+    <span className="flex w-full items-center gap-2.5">
       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="inline">{t(title)}</span>
         {hint && <span className="mt-0.5 block text-[11px] font-normal opacity-70">{t(hint)}</span>}
       </span>
@@ -197,7 +198,10 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
           </colgroup>
           <thead>
             <tr>
-              <th className={cn(label, "align-bottom")}><span className="kisan-label">{t("Measure")}</span></th>
+              <th className={cn(label, "align-bottom")}>
+                <span className="block text-sm font-semibold normal-case tracking-normal text-foreground">{t("Measure")}</span>
+                <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-muted-foreground">{t("Hover the i to learn more")}</span>
+              </th>
               {cols.map((s, i) => {
                 const on = selected === s.id;
                 const isBest = s.total === bestTotal && !s.isCurrent;
@@ -348,8 +352,14 @@ function ClimatePanel({ climate, scenario, order }) {
         <a href={climate.source_url} target="_blank" rel="noreferrer" className="kisan-chip text-[11px]"><Satellite className="h-3 w-3" aria-hidden="true" /> NASA POWER</a>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        {t("Average month at {place}. Bars: rain. Numbers: average daytime high.", { place: climate.location })}
+        {t("Average month at {place}.", { place: climate.location })}
       </p>
+      {/* Legend: what the bars and numbers mean. */}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground" data-testid="climate-legend">
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-2.5 rounded-sm bg-sky-500/60" aria-hidden="true" />{t("Blue bar: average rain that month")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="font-semibold text-foreground">25°</span>{t("average daytime high")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="font-semibold text-alert">42°</span>{t("red: hotter than 40 °C, heat stress")}</span>
+      </div>
       <div className="mt-5 grid grid-cols-12 items-end gap-1" dir="ltr" style={{ height: 120 }}>
         {order.map((m) => {
           const d = climate.monthly[m - 1];
@@ -527,6 +537,18 @@ export default function Rotation() {
               {t("Waterlogging risk used in the scores")}: <span className={cn("font-semibold", land.waterlog === "high" ? "text-alert" : land.waterlog === "moderate" ? "text-harvest" : GOOD)}>{t(land.waterlog === "high" ? "High" : land.waterlog === "moderate" ? "Medium" : "Low")}</span>
             </p>
           )}
+          <div className="mt-5 border-t pt-4 [border-color:var(--card-line)]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("What this means for your farm")}</p>
+            <ul className="mt-2 list-disc space-y-1.5 ps-5 text-[13px] leading-relaxed marker:text-muted-foreground">
+              {land.waterlog === "high" && <li>{t("A high water table is common here: prefer crops that tolerate wet soil, and keep drains clear before the monsoon.")}</li>}
+              {land.waterlog === "moderate" && <li>{t("Waterlogging happens in parts of this area: avoid over-irrigating, and level fields so water doesn't stand.")}</li>}
+              {!us && <li>{t("Salt-affected land is widespread here. White crust or patchy germination are warning signs; gypsum and good drainage help.")}</li>}
+              {terrain?.elevation_m != null && (
+                <li>{t("Your land sits about {m} m above sea level with a {slope}% slope (NASA SRTM), so erosion risk on bare soil is {risk}.", { m: terrain.elevation_m, slope: terrain.slope_pct, risk: t(terrain.erosion_risk) })}</li>
+              )}
+              <li>{us ? t("A soil test from your county extension office gives exact nutrient and pH values for your field.") : t("For exact figures, get a soil and water test at the Soil and Water Testing Laboratory in your district (Agriculture Department). It is cheap and shows salt, pH and nutrients.")}</li>
+            </ul>
+          </div>
           <p className="mt-4 text-xs text-muted-foreground">
             {us ? t("Read live for your location. It maps soil types, not this season's condition.") : t("Province-level background from older surveys, not your field. A soil and water test from your district laboratory is the real answer.")}
           </p>

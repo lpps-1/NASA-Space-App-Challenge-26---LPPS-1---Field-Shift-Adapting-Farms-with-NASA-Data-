@@ -23,6 +23,20 @@ export default function TodayTasks({ tasks = [], demo = false }) {
   const { update, create } = useEntityMutations("Task", "tasks");
   const { t: tr, lang } = useT();
   const [adding, setAdding] = useState(false);
+  // Ticked jobs play a short "done" animation (check fills in, row slides away) before they are saved as done.
+  const [ticking, setTicking] = useState(() => new Set());
+  const tick = (task) => {
+    if (ticking.has(task.id)) return;
+    setTicking((s) => new Set(s).add(task.id));
+    setTimeout(() => {
+      update.mutate({ id: task.id, done: true });
+      setTicking((s) => {
+        const n = new Set(s);
+        n.delete(task.id);
+        return n;
+      });
+    }, 1100);
+  };
   const [draft, setDraft] = useState({ title: "", date: isoOf(new Date()), type: "irrigation" });
   const upcoming = tasks.filter((t) => !t.done).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
 
@@ -49,16 +63,20 @@ export default function TodayTasks({ tasks = [], demo = false }) {
       {upcoming.length > 0 && (
         <ul className="mt-4 divide-y divide-border">
           {upcoming.map((t) => (
-            <li key={t.id} className="flex items-center gap-3 py-3">
+            <li key={t.id} className={cn("flex items-center gap-3 py-3", ticking.has(t.id) && "task-leave")}>
               <button
-                onClick={() => update.mutate({ id: t.id, done: true })}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-transparent hover:border-primary hover:text-primary focus-ring"
+                onClick={() => tick(t)}
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors focus-ring",
+                  ticking.has(t.id) ? "task-tick border-primary bg-primary text-primary-foreground" : "border-border text-transparent hover:border-primary hover:text-primary"
+                )}
                 aria-label={tr("Mark \"{task}\" done", { task: tr(t.title) })}
+                aria-pressed={ticking.has(t.id)}
               >
-                <Check className="h-3.5 w-3.5" />
+                <Check className="h-3.5 w-3.5" strokeWidth={3} />
               </button>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium" dir="auto">{tr(t.title)}</p>
+                <p className={cn("truncate text-sm font-medium transition-colors duration-300", ticking.has(t.id) && "text-muted-foreground line-through")} dir="auto">{tr(t.title)}</p>
                 {t.field && <p className="text-xs text-muted-foreground" dir="auto">{tr(t.field)}</p>}
               </div>
               <div className="text-end">

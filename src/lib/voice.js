@@ -425,10 +425,15 @@ function score(v, prefs) {
   });
   if (s < 0) return -1;
   if (/natural|neural|online|premium|enhanced|wavenet/i.test(v.name)) s += 6;
+  // Kisan AI talks about itself in the masculine in Urdu ("میں مدد کر سکتا ہوں"), so a male voice
+  // matches; a female voice saying masculine verbs sounds wrong.
+  if (MALE.test(v.name)) s += 8;
   if (/google|microsoft/i.test(v.name)) s += 3;
   if (!v.localService) s += 1;
   return s;
 }
+
+const MALE = /(asad|salman|madhur|hemant|prabhat|ravi|kunal|aarav|arjun|rehaan|david|mark|guy|ryan|george|andrew|brian|christopher|eric|roger|thomas|liam|william|james|daniel|male)/i;
 
 const PREFS = {
   ur: ["ur-pk", "ur-in", "ur"],
@@ -679,13 +684,13 @@ async function planCloud(text, hint, opts, prepare, synthesize) {
 
 /** The cloud voice is unavailable: plan the text for the device's voices, in short pieces. */
 async function devicePlan(text, hint, opts, prepare, reason) {
-  const parts = text
+  const parts = joinShort(text
     .split("\n")
     .flatMap((line) => {
       const [sentences, rest] = takeSentences(line + " ");
       return rest.trim() ? [...sentences, rest.trim()] : sentences;
     })
-    .flatMap(split);
+    .flatMap(split));
   const pieces = await Promise.all(parts.map((t) => planPiece(t, hint, { ...opts, noCloud: true }, prepare)));
   // Nothing on this device can say it: keep the answer as text and tell the page why.
   if (!pieces.some((x) => x.text?.trim())) return { mode: "skip", text, reason, pieces };
@@ -1002,7 +1007,7 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
           return rest.trim() ? [...sentences, rest.trim()] : sentences;
         })
         .flatMap(split);
-      for (const piece of pieces) {
+      for (const piece of joinShort(pieces)) {
         queue.push(
           planPiece(piece, lang, opts, prepare).then((p) => {
             if (p.mode === "hindi" || p.mode === "none") warn(lang || scriptLang(piece), p.mode);
@@ -1043,6 +1048,17 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
       return speaking;
     },
   };
+}
+
+/** Joins neighbouring sentences into utterances of up to ~180 characters (each utterance ends with a pause). */
+function joinShort(pieces, max = 180) {
+  const out = [];
+  for (const p of pieces) {
+    const last = out[out.length - 1];
+    if (last && last.length + 1 + p.length <= max) out[out.length - 1] = `${last} ${p}`;
+    else out.push(p);
+  }
+  return out;
 }
 
 function split(s) {

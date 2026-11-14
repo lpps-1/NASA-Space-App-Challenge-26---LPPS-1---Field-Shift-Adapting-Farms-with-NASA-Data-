@@ -4,7 +4,8 @@ import { AlertTriangle, ArrowRight, CalendarPlus, CheckCircle2, MessagesSquare, 
 import { toast } from "sonner";
 import { CROP_DAYS, CROP_EMOJI, TYPICAL_YIELD } from "@/data/fixtures";
 import { inputClass } from "@/components/FormField";
-import { useEntityMutations } from "@/hooks/useKisanData";
+import { useEntityMutations, useProfile, useSettings } from "@/hooks/useKisanData";
+import { formatYield, yieldUnit } from "@/lib/units";
 import { useT } from "@/i18n";
 import { cropLabel } from "@/lib/cropNames";
 import { estimateStage } from "@/lib/fieldStage";
@@ -96,6 +97,9 @@ function FieldCard({ f, demo, onReport }) {
   const pct = est?.day != null && est.of ? Math.max(0, Math.min(1, est.day / est.of)) : null;
   const harvest = f.sown && days ? new Date(new Date(f.sown + "T12:00:00").getTime() + days * 864e5) : null;
   const maunds = estimate(f);
+  const { data: settings } = useSettings();
+  const { data: profile } = useProfile();
+  const unit = yieldUnit(settings, lang, profile?.country);
   const issues = f.issues || [];
   const resolve = (id) => update.mutate({ id: f.id, issues: issues.filter((x) => x.id !== id) });
 
@@ -147,7 +151,7 @@ function FieldCard({ f, demo, onReport }) {
       {/* Row 4: typical harvest. */}
       <p className="text-xs text-muted-foreground">
         {t("Typical harvest")}:{" "}
-        <span className="font-semibold tabular-nums text-foreground">{maunds != null && f.sown ? t("{n} maunds", { n: maunds.toLocaleString("en-PK") }) : "—"}</span>
+        <span className="font-semibold tabular-nums text-foreground">{maunds != null && f.sown ? formatYield(maunds, unit, t) : "—"}</span>
       </p>
 
       {/* Row 5: warnings, with a heading even when there are none. */}

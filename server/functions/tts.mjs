@@ -27,7 +27,7 @@ const MODELS = [
   "gemini-3.1-flash-tts-preview",
   "gemini-2.5-flash-preview-tts",
 ].filter(Boolean);
-const VOICE = process.env.KISAN_TTS_VOICE || "Kore";
+const VOICE = process.env.KISAN_TTS_VOICE || "Charon"; // male: Kisan AI speaks of itself in the masculine in Urdu
 const MAX_CHARS = 1500; // one request per answer part saves the daily speech quota
 const CACHE = new Map(); // text → wav, so "Listen" again costs nothing
 const CACHE_MAX = 60;

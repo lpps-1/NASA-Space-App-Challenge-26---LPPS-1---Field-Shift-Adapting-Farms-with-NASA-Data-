@@ -40,7 +40,7 @@ Never put the key in the code or in a commit. Optional variables:
 | `KISAN_CHAT_MODEL` | Chat model id, e.g. `gemini-3.8-flash` |
 | `KISAN_CHAT_PROVIDER` | `claude` to use Claude instead (needs `ANTHROPIC_API_KEY`) |
 | `KISAN_TTS` | `off` to stop using the online Urdu voice |
-| `KISAN_TTS_VOICE` | Gemini voice name for spoken Urdu (default `Kore`) |
+| `KISAN_TTS_VOICE` | Gemini voice name for spoken Urdu (default `Charon`, a male voice to match Kisan AI's masculine Urdu) |
 | `KISAN_TTS_MODEL` | Gemini speech model to try first |
 
 **Spoken Urdu.** Most computers (and some phones) have no Urdu voice. On those, `/api/tts` makes real Pakistani Urdu speech with Gemini's speech model (Urdu `ur-PK`, preview), using the same key. If it fails or the daily limit is reached, the app falls back to the device's own voices (a Hindi voice reading the Urdu words), so speech never stops. Spoken replies are **off by default**; the farmer turns them on under the message box.
