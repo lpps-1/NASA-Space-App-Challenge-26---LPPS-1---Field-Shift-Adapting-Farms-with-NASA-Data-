@@ -269,21 +269,42 @@ export default async (req) => {
         send({ type: "status", value: name === "get_weather" ? "weather" : name });
         return name === "get_weather" ? await getWeather(input || {}) : { error: `Unknown tool ${name}` };
       };
+      // The model sometimes copies the internal "Reply language for this turn" note into its answer
+      // (often after a "---" line). Hold back anything that could be the start of it and drop it.
+      const LEAK = /(\n\s*-{3,}\s*)?\n?\s*[*_#]*\s*Reply language for this turn[\s\S]*$/i;
+      const MARKERS = ["\n---", "Reply language", "*Reply", "## Reply"];
+      let held = "";
+      const flushSafe = () => {
+        // A marker only counts while the text after it could still become the note (a normal "---" divider passes).
+        const cut = MARKERS.map((m) => held.indexOf(m)).filter((i) => i >= 0 && (held.length - i < 60 || /Reply language/i.test(held.slice(i, i + 80))));
+        const keepFrom = cut.length ? Math.min(...cut) : Math.max(0, held.length - 16);
+        const out = held.slice(0, keepFrom);
+        held = held.slice(keepFrom);
+        if (out) send({ type: "text", value: out });
+      };
       const onText = (t) => {
         sentText = true;
-        send({ type: "text", value: t });
+        held += t;
+        flushSafe();
+      };
+      const flushAll = () => {
+        const out = held.replace(LEAK, "").replace(/\s+$/, "");
+        held = "";
+        if (out) send({ type: "text", value: out });
       };
       try {
         stop =
           PROVIDER === "claude"
             ? await runClaude({ system, directive, convo, voice: ctx.voice, signal: abort.signal, onText, runTool })
             : await runGeminiWithFallback({ system, directive, convo, voice: ctx.voice, signal: abort.signal, onText, runTool }, () => sentText);
+        flushAll();
         send({ type: "done", stop });
       } catch (err) {
         const timedOut = abort.signal.aborted;
         const status = err?.status;
         if (timedOut && sentText) {
           // Long answer: end cleanly so the app can offer "Continue answer".
+          flushAll();
           send({ type: "done", stop: "max_tokens" });
           return;
         }

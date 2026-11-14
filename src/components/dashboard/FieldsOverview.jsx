@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CalendarPlus, MessagesSquare, Plus, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarPlus, CheckCircle2, MessagesSquare, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { CROP_DAYS, CROP_EMOJI, TYPICAL_YIELD } from "@/data/fixtures";
 import { inputClass } from "@/components/FormField";
@@ -99,8 +99,12 @@ function FieldCard({ f, demo, onReport }) {
   const issues = f.issues || [];
   const resolve = (id) => update.mutate({ id: f.id, issues: issues.filter((x) => x.id !== id) });
 
+  const harvestLabel = harvest ? `${t("Harvest")} ~${harvest.toLocaleDateString(lang === "en" ? "en-GB" : "ur-PK", { month: "short", year: "numeric" })}` : t("Harvest");
+
+  // Six rows on a shared grid (subgrid), so each row starts at the same height in every card:
+  // name · sowing date · season progress · typical harvest · warnings · report button.
   return (
-    <li className="flex flex-col rounded-2xl border bg-background/40 p-4 [border-color:var(--card-line)]">
+    <li className="row-span-6 grid grid-rows-subgrid gap-3 rounded-2xl border bg-background/40 p-4 [border-color:var(--card-line)]">
       <Link to={`/fields/${f.id}`} className="group flex items-center gap-2.5 focus-ring">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-xl" aria-hidden="true">{CROP_EMOJI[f.crop] || "🌱"}</span>
         <span className="min-w-0 flex-1">
@@ -110,62 +114,72 @@ function FieldCard({ f, demo, onReport }) {
         <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">{t("{n} acres", { n: f.acres })}</span>
       </Link>
 
+      {/* Row 2: when it was sown, or a button to add the date. */}
       {f.sown ? (
-        <div className="mt-3">
-          <p className="text-xs text-muted-foreground">
-            {demo ? t("Sown about") : t("Sown")} <span className="font-medium text-foreground">{fmtDate(f.sown, lang)}</span>
-            {est?.day != null && est.day >= 0 && <> · {est.day > est.of ? t("day {d}, past the usual {n}", { d: est.day, n: est.of }) : t("day {d} of about {n}", { d: est.day, n: est.of })}</>}
-          </p>
-          {pct != null && (
-            <>
-              <div className="mt-2 flex items-baseline justify-between text-[11px]">
-                <span className="text-muted-foreground">{t("Season progress")}</span>
-                <span className="font-semibold text-foreground">{t(est.stage)}</span>
-              </div>
-              <div className="relative mt-1 h-2 rounded-full bg-muted" dir="ltr" title={t("How far the crop is from sowing to harvest, estimated from the sowing date")}>
-                <div className="kisan-grow h-full rounded-full bg-gradient-to-r from-field to-harvest" style={{ width: `${Math.max(4, pct * 100)}%` }} />
-                {STAGE_AT.slice(1).map((at) => (
-                  <span key={at} className="absolute top-0 h-2 w-px bg-background/80" style={{ left: `${at * 100}%` }} aria-hidden="true" />
-                ))}
-              </div>
-              <div className="mt-1 flex justify-between text-[10px] text-muted-foreground" dir="ltr">
-                <span>{t("Sowing")}</span>
-                <span>{harvest ? `${t("Harvest")} ~${harvest.toLocaleDateString(lang === "en" ? "en-GB" : "ur-PK", { month: "short", year: "numeric" })}` : t("Harvest")}</span>
-              </div>
-            </>
-          )}
-          {est && pct == null && <p className="mt-2 text-xs font-medium">{t(est.stage)}</p>}
-        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {demo ? t("Sown about") : t("Sown")} <span className="font-medium text-foreground">{fmtDate(f.sown, lang)}</span>
+          {est?.day != null && est.day >= 0 && <> · {est.day > est.of ? t("day {d}, past the usual {n}", { d: est.day, n: est.of }) : t("day {d} of about {n}", { d: est.day, n: est.of })}</>}
+        </p>
       ) : (
-        // Same size and place in every card: a full-width, fixed-height button right under the crop name.
-        <Link to={`/fields/${f.id}`} className="mt-3 flex h-11 items-center gap-2 rounded-xl border border-dashed border-harvest/60 px-3 text-xs font-medium text-highlight hover:bg-harvest/10 focus-ring" data-testid="add-sowing-date">
-          <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden="true" /> <span className="line-clamp-2">{t("Add the sowing date to see the crop stage")}</span>
+        <Link to={`/fields/${f.id}`} className="flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-harvest/60 px-3 py-2 text-xs font-medium text-highlight hover:bg-harvest/10 focus-ring" data-testid="add-sowing-date">
+          <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden="true" /> <span>{t("Add the sowing date to see the crop stage")}</span>
         </Link>
       )}
 
-      {maunds != null && f.sown && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t("Typical harvest")}: <span className="font-semibold tabular-nums text-foreground">{t("{n} maunds", { n: maunds.toLocaleString("en-PK") })}</span>
-        </p>
-      )}
-
-      {issues.length > 0 && (
-        <ul className="mt-3 space-y-1.5">
-          {issues.map((x) => (
-            <li key={x.id} className="flex items-start gap-2 rounded-xl bg-alert/10 px-2.5 py-2 text-xs">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-alert" aria-hidden="true" />
-              <span className="min-w-0 flex-1">
-                <span className="font-medium">{t(issueLabel(x.type))}</span>
-                {x.note && <span className="block text-muted-foreground" dir="auto">{x.note}</span>}
-              </span>
-              <button onClick={() => resolve(x.id)} className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-background/60 hover:text-foreground focus-ring">{t("Solved")}</button>
-            </li>
+      {/* Row 3: season progress. */}
+      <div data-testid="season-progress">
+        <div className="flex items-baseline justify-between gap-2 text-[11px]">
+          <span className="whitespace-nowrap text-muted-foreground">{t("Season progress")}</span>
+          <span className="truncate font-semibold text-foreground">{est ? t(est.stage) : "—"}</span>
+        </div>
+        <div className="relative mt-1.5 h-2 rounded-full bg-muted" dir="ltr" title={t("How far the crop is from sowing to harvest, estimated from the sowing date")}>
+          {pct != null && <div className="kisan-grow h-full rounded-full bg-gradient-to-r from-field to-harvest" style={{ width: `${Math.max(4, pct * 100)}%` }} />}
+          {STAGE_AT.slice(1).map((at) => (
+            <span key={at} className="absolute top-0 h-2 w-px bg-background/80" style={{ left: `${at * 100}%` }} aria-hidden="true" />
           ))}
-        </ul>
-      )}
+        </div>
+        <div className="mt-1 flex justify-between text-[10px] text-muted-foreground" dir="ltr">
+          <span>{t("Sowing")}</span>
+          <span>{harvestLabel}</span>
+        </div>
+      </div>
 
-      <button onClick={() => onReport(f)} className="mt-auto inline-flex items-center gap-1.5 self-start pt-3 text-xs font-medium text-muted-foreground hover:text-foreground focus-ring" data-testid="report-problem">
-        <Plus className="h-3.5 w-3.5" aria-hidden="true" /> {t("Report a problem in this field")}
+      {/* Row 4: typical harvest. */}
+      <p className="text-xs text-muted-foreground">
+        {t("Typical harvest")}:{" "}
+        <span className="font-semibold tabular-nums text-foreground">{maunds != null && f.sown ? t("{n} maunds", { n: maunds.toLocaleString("en-PK") }) : "—"}</span>
+      </p>
+
+      {/* Row 5: warnings, with a heading even when there are none. */}
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t("Warnings")}</p>
+        {issues.length ? (
+          <ul className="mt-1.5 space-y-1.5">
+            {issues.map((x) => (
+              <li key={x.id} className="flex items-start gap-2 rounded-xl bg-alert/10 px-2.5 py-2 text-xs">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-alert" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">{t(issueLabel(x.type))}</span>
+                  {x.note && <span className="block text-muted-foreground" dir="auto">{x.note}</span>}
+                </span>
+                <button onClick={() => resolve(x.id)} className="shrink-0 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-background/60 hover:text-foreground focus-ring">{t("Solved")}</button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1.5 flex items-center gap-2 rounded-xl bg-secondary/50 px-2.5 py-2 text-xs text-muted-foreground">
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" /> {t("No problems reported")}
+          </p>
+        )}
+      </div>
+
+      {/* Row 6: a real button, same place in every card. */}
+      <button
+        onClick={() => onReport(f)}
+        className="inline-flex w-full items-center justify-center gap-1.5 self-end rounded-xl border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary focus-ring [border-color:var(--card-line)]"
+        data-testid="report-problem"
+      >
+        <AlertTriangle className="h-3.5 w-3.5 text-alert" aria-hidden="true" /> {t("Report a problem")}
       </button>
     </li>
   );
