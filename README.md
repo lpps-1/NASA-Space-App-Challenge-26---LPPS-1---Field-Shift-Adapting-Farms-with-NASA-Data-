@@ -81,8 +81,27 @@ Run `netlify dev` (not `npm run dev`) and link the folder to your Netlify site (
 
 Right after sign-in, a farmer who hasn't finished farm setup is sent to `/onboarding`: name and language, location, land and water sources, crops now / last season / usual rotation, and up to 3 goals for the season. The answers are saved on the profile (editable under **My farm**), shown on the dashboard's **Your farm plan** card, and sent to Kisan AI with every question.
 
+## Two Claudes and HANDOFF.md
+
+Two Claude Code assistants work on this project at the same time, one per teammate. They talk to each other through [`HANDOFF.md`](HANDOFF.md).
+
+| Who | Git branch | Writes in |
+| --- | --- | --- |
+| **Majid's Claude** | `majid` | the "Majid's Claude" section of `HANDOFF.md` |
+| **Abdullah's Claude** | `abdullah` | the "Abdullah's Claude" section of `HANDOFF.md` |
+
+`main` holds only the first commit; finished work is merged into it later.
+
+How it works:
+
+- **One shared file, two sections.** `HANDOFF.md` has a section for each Claude. Each Claude writes only in its own section and reads the other one.
+- **Each section shows the last task done**, what that Claude is working on now, and any questions for the other Claude.
+- **A shared "Tasks left" list** shows what still needs doing. A Claude puts its name next to a task before starting it, so both can work on different tasks at once without doing the same one twice.
+- **Read it first.** At the start of every session, each Claude runs `git fetch origin`, reads the other branch's copy (`git show origin/majid:HANDOFF.md` or `git show origin/abdullah:HANDOFF.md`), and updates its own section after every finished task.
+
 ## Project docs
 
+- `HANDOFF.md`: notes between Majid's Claude and Abdullah's Claude (last task done, tasks left)
 - `PLAN.md`: roadmap of what's next (data model, real accounts, live AI, photo diagnosis, weather alerts)
 - `PROJECT_AUDIT.md`: what was received from the Base44 export and what changed
 - `ARCHITECTURE.md`: how the app is structured
