@@ -1,6 +1,6 @@
 /**
  * Pakistan administrative geography: the reviewed, version-controlled list the
- * app runs on. The API (netlify/lib/geo.mjs → /api/geo, /api/weather and the
+ * app runs on. The API (server/lib/geo.mjs → /api/geo, /api/weather and the
  * assistant's weather tool) and the browser fallback (src/lib/geoLocal.js)
  * both read this file directly. No database is involved.
  *

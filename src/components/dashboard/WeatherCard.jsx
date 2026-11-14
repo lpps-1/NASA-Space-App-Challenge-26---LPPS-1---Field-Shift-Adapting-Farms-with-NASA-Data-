@@ -23,7 +23,7 @@ const TABS = [
 const dayName = (d, t, lang, long = false) =>
   d.date ? new Date(d.date + "T12:00:00").toLocaleDateString(lang === "en" ? "en-GB" : "ur-PK", { weekday: long ? "long" : "short" }) : t(d.day);
 
-/** Plain farm advice from the forecast (°C), in the app language. Mirrors advise() in netlify/functions/weather.mjs. */
+/** Plain farm advice from the forecast (°C), in the app language. Mirrors advise() in server/functions/weather.mjs. */
 function adviceFor(days, t, lang) {
   const name = (d) => dayName(d, t, lang);
   const rain = days.slice(0, 4).find((d) => d.rain >= 50 || (d.rain_mm ?? 0) >= 5);

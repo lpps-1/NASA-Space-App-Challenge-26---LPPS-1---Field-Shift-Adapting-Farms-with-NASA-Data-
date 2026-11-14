@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   AlertCircle,
-  ArrowUp,
+  ArrowRight,
   AudioLines,
   ClipboardList,
   PanelRight,
@@ -13,7 +13,6 @@ import {
   Languages,
   Loader2,
   Mic,
-  Plus,
   RotateCcw,
   Square,
   Volume2,
@@ -214,6 +213,23 @@ export default function Assistant() {
   tRef.uiLang = uiLang;
   const qc = useQueryClient();
   const [plansOpen, setPlansOpen] = useState(false);
+  // Wide screens: the plans panel can be hidden, like a closable side panel. Remembered on this device.
+  const [plansCollapsed, setPlansCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("kisan-plans-collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const togglePlansCollapsed = () =>
+    setPlansCollapsed((c) => {
+      try {
+        localStorage.setItem("kisan-plans-collapsed", c ? "0" : "1");
+      } catch {
+        /* storage blocked */
+      }
+      return !c;
+    });
   const [savedPlans, setSavedPlans] = useState({}); // message index → saved (this conversation)
   const { data: settings } = useSettings();
   const updateSettings = useUpdateSettings();
@@ -228,7 +244,7 @@ export default function Assistant() {
   const [convoId, setConvoId] = useState(null);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [voiceOn, setVoiceOn] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
   // idle | recording | transcribing | thinking | speaking
   const [phase, setPhase] = useState("idle");
@@ -783,102 +799,21 @@ export default function Assistant() {
   const planCount = qc.getQueryData(["plans"])?.length || 0;
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className={cn("grid gap-5", !plansCollapsed && "xl:grid-cols-[minmax(0,1fr)_300px]")}>
             <section className="flex min-h-[calc(100vh-4.5rem)] min-w-0 flex-col lg:min-h-[calc(100vh-2rem)]">
-        {/* Assistant identity + controls */}
-        <header className="z-10 flex flex-wrap items-center justify-between gap-3 border-b pb-3 [border-color:hsl(var(--edge))]">
-          <div className="relative hidden min-w-0 items-center gap-3 lg:flex">
-            <span className="relative">
-              <BrandMark className="h-8 w-8" />
-              <span
-                className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-background",
-                  phase === "recording" ? "bg-alert" : phase === "speaking" ? "bg-harvest" : live ? "bg-harvest soft-pulse" : "bg-emerald-400"
-                )}
-                aria-hidden="true"
-              />
-            </span>
-            <div className="min-w-0">
-              <h1 className="text-base font-semibold leading-tight">Kisan AI</h1>
-              <p className="truncate text-xs text-muted-foreground">{t("Farming assistant in Urdu, Punjabi and English")}</p>
-            </div>
-          </div>
-          <div className="relative flex shrink-0 flex-wrap items-center gap-1.5">
-            <label className="inline-flex items-center gap-1.5 rounded-md border bg-card py-1 pe-1 ps-2.5 text-xs text-muted-foreground [border-color:hsl(var(--edge))]">
-              <Languages className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-              <span className="sr-only">{t("Speaking language")}</span>
-              <select
-                value={VOICE_LANGS.some((l) => l.value === voiceLang) ? voiceLang : voiceLang.startsWith("pa") ? "pa-PK" : "auto"}
-                onChange={(e) => setVoiceLanguage(e.target.value)}
-                className="cursor-pointer rounded bg-transparent py-1 pe-1 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={t("Language you speak")}
-                data-testid="language-select"
-              >
-                {VOICE_LANGS.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {uiLang === "en" ? l.label : l.native}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {messages.length > 0 && (
-              <button
-                onClick={newConversation}
-                className="rounded-md border bg-card p-2 text-muted-foreground hover:bg-secondary hover:text-foreground focus-ring lg:hidden [border-color:hsl(var(--edge))]"
-                aria-label={t("New chat")}
-                title={t("New chat")}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            )}
-            <button
-              onClick={toggleHandsFree}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md border p-2 text-xs font-medium focus-ring sm:px-3",
-                handsFree ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-              aria-pressed={handsFree}
-              title={t("Conversation mode: Kisan AI listens again after each spoken answer")}
-            >
-              <AudioLines className="h-4 w-4" />
-              <span className="hidden sm:inline">{handsFree ? t("Conversation on") : t("Conversation mode")}</span>
-            </button>
-            <button
-              onClick={() => {
-                const next = !voiceOn;
-                setVoiceOn(next);
-                voiceOnRef.current = next;
-                if (!next) stopSpeaking();
-                else unlockSpeech();
-                updateSettings.mutate({ voice_replies: next });
-              }}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md border p-2 text-xs font-medium focus-ring sm:px-3",
-                voiceOn ? "border-border bg-card text-foreground hover:bg-secondary" : "border-alert/50 bg-alert/10 text-alert"
-              )}
-              aria-pressed={voiceOn}
-              aria-label={voiceOn ? t("Turn off spoken replies") : t("Turn on spoken replies")}
-              title={voiceOn ? t("Spoken replies on") : t("Spoken replies off")}
-              data-testid="speaker-toggle"
-            >
-              {voiceOn ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
-              <span className="hidden sm:inline">{voiceOn ? t("Speak aloud: on") : t("Speak aloud: off")}</span>
-            </button>
-            <button
-              onClick={() => setPlansOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border bg-card p-2 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground focus-ring sm:px-3 xl:hidden [border-color:hsl(var(--edge))]"
-              aria-label={t("Your plans")}
-            >
-              <PanelRight className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("Plans")}{planCount ? ` (${planCount})` : ""}</span>
-            </button>
-          </div>
-          <p className="relative w-full text-[11px] text-muted-foreground" data-testid="voice-capability">
-            <Volume2 className="me-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
-            {urduVoiceLabel}
-            {caps.english ? `, ${t("English voice ready")}` : ""}
-          </p>
-        </header>
+        {/* Sleek top: no title or description, just a button to show or hide the plans panel. */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => (window.matchMedia("(min-width: 1280px)").matches ? togglePlansCollapsed() : setPlansOpen(true))}
+            className="inline-flex items-center gap-1.5 rounded-lg p-2 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground focus-ring"
+            aria-label={plansCollapsed ? t("Show your plans") : t("Hide your plans")}
+            title={plansCollapsed ? t("Show your plans") : t("Hide your plans")}
+            data-testid="plans-toggle"
+          >
+            <PanelRight className="h-4 w-4 rtl:-scale-x-100" />
+            {planCount > 0 && <span className="tabular-nums">{planCount}</span>}
+          </button>
+        </div>
 
         <div className="mx-auto w-full max-w-3xl flex-1 space-y-7 py-8" aria-live="polite">
           {messages.length === 0 && (
@@ -1023,7 +958,7 @@ export default function Assistant() {
               aria-label={t("Message")}
               data-testid="composer"
             />
-            <div className="mt-1 flex items-center justify-between gap-2 px-1">
+            <div className="mt-1 flex items-center gap-1 px-1">
             <button
               type="button"
               onClick={onMic}
@@ -1047,6 +982,59 @@ export default function Assistant() {
                 <Mic className="h-4 w-4" />
               )}
             </button>
+            {/* Voice controls sit under the message box, like Claude's composer. */}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
+                <label className="inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-secondary">
+                  <Languages className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                  <span className="sr-only">{t("Speaking language")}</span>
+                  <select
+                    value={VOICE_LANGS.some((l) => l.value === voiceLang) ? voiceLang : voiceLang.startsWith("pa") ? "pa-PK" : "auto"}
+                    onChange={(e) => setVoiceLanguage(e.target.value)}
+                    className="cursor-pointer rounded bg-transparent py-1 pe-1 text-xs font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={t("Language you speak")}
+                    data-testid="language-select"
+                  >
+                    {VOICE_LANGS.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {uiLang === "en" ? l.label : l.native}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  onClick={toggleHandsFree}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium focus-ring",
+                    handsFree ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                  aria-pressed={handsFree}
+                  title={t("Conversation mode: Kisan AI listens again after each spoken answer")}
+                >
+                  <AudioLines className="h-4 w-4" />
+                  <span className="hidden sm:inline">{handsFree ? t("Conversation on") : t("Conversation mode")}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const next = !voiceOn;
+                    setVoiceOn(next);
+                    voiceOnRef.current = next;
+                    if (!next) stopSpeaking();
+                    else unlockSpeech();
+                    updateSettings.mutate({ voice_replies: next });
+                  }}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-xs font-medium focus-ring",
+                    voiceOn ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                  aria-pressed={voiceOn}
+                  aria-label={voiceOn ? t("Turn off spoken replies") : t("Turn on spoken replies")}
+                  title={`${voiceOn ? t("Spoken replies on") : t("Spoken replies off")} · ${urduVoiceLabel}`}
+                  data-testid="speaker-toggle"
+                >
+                  {voiceOn ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{t("Speak aloud")}</span>
+                </button>
+            </div>
             {busy && phase !== "thinking" ? (
               <button
                 type="button"
@@ -1062,7 +1050,7 @@ export default function Assistant() {
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground focus-ring"
                 aria-label={t("Send")}
               >
-                <ArrowUp className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4 rtl:rotate-180" />
               </button>
             )}
             </div>
@@ -1074,7 +1062,7 @@ export default function Assistant() {
       </section>
 
       {/* Right: plans and the farm at a glance */}
-      <PlansPanel className="hidden xl:sticky xl:top-4 xl:flex xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto" />
+      {!plansCollapsed && <PlansPanel className="kisan-fade hidden xl:sticky xl:top-4 xl:flex xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto" onClose={togglePlansCollapsed} />}
       {plansOpen && (
         <div className="fixed inset-0 z-40 xl:hidden" role="dialog" aria-modal="true" aria-label={t("Your plans")}>
           <button className="absolute inset-0 bg-black/40" onClick={() => setPlansOpen(false)} aria-label={t("Close")} />

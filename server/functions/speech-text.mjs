@@ -15,7 +15,7 @@ import { hasArabicScript, urduToDevanagari } from "../../src/lib/urduTranslit.js
  *    translated and no Sanskrit/Hindi words are substituted.
  *  - target "ur": Roman Urdu → Urdu script, so an Urdu voice can read it.
  *
- * Runs on Gemini through your GEMINI_API_KEY or Netlify AI Gateway (see netlify/lib/gemini.mjs).
+ * Runs on Gemini through your GEMINI_API_KEY (see server/lib/gemini.mjs).
  */
 
 
@@ -118,4 +118,3 @@ export default async (req) => {
   return json(502, { error: "Could not prepare the text for speech." });
 };
 
-export const config = { path: "/api/speech-text" };

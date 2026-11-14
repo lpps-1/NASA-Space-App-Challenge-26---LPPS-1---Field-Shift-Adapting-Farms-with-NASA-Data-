@@ -6,7 +6,7 @@ import { flattenGeo } from "../../db/geo/pakistan.mjs";
  * the functions, so no database is needed. To change districts or tehsils,
  * edit that file and redeploy.
  *
- * Response shapes match the earlier Netlify Database version, so /api/geo,
+ * Response shapes match the earlier database version, so /api/geo,
  * /api/weather and the assistant's weather tool are unchanged.
  */
 

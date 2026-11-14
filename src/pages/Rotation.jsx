@@ -129,18 +129,18 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
   };
   return (
     <div className="kisan-card overflow-x-auto p-0" data-testid="compare-table">
-      <table className="w-full min-w-[640px] border-collapse text-sm">
+      <table className="w-full min-w-[720px] table-fixed border-collapse text-sm">
         <thead>
           <tr>
-            <th className="w-36 p-4 text-start align-bottom"><span className="kisan-label">{t("Measure")}</span></th>
+            <th className="w-40 p-4 text-start align-bottom"><span className="kisan-label">{t("Measure")}</span></th>
             {cols.map((s, i) => (
               <th key={s.id} className={cn("p-0 align-top font-normal", selected === s.id && "bg-primary/10")}>
-                <button type="button" onClick={() => onSelect(s.id)} aria-pressed={selected === s.id} className="flex h-full w-full flex-col items-center gap-2 p-4 text-center transition-colors hover:bg-secondary/40 focus-ring">
-                  <span className={cn("kisan-chip text-[10px]", s.isCurrent ? "border-harvest/50 text-harvest" : s.total === bestTotal && "border-field/60 text-field")}>
-                    {s.isCurrent ? t("You grow this now") : s.total === bestTotal ? <><Trophy className="h-3 w-3" aria-hidden="true" /> {t("Best fit")}</> : t("Option {n}", { n: i })}
+                <button type="button" onClick={() => onSelect(s.id)} aria-pressed={selected === s.id} className="flex h-full w-full flex-col items-center justify-start gap-2 p-4 text-center transition-colors hover:bg-secondary/40 focus-ring">
+                  <span className={cn("kisan-chip h-6 whitespace-nowrap text-[10px]", s.isCurrent ? "border-harvest/50 text-harvest" : s.total === bestTotal && "border-field/60 text-field")}>
+                    {s.isCurrent ? t("Now") : s.total === bestTotal ? <><Trophy className="h-3 w-3" aria-hidden="true" /> {t("Best fit")}</> : t("Option {n}", { n: i })}
                   </span>
                   <Ring value={s.total} best={s.total === bestTotal} />
-                  <span className="font-display text-[15px] leading-snug" dir="auto">{rotationTitle(s, lang)}</span>
+                  <span className="line-clamp-3 min-h-[3.9em] font-display text-[15px] leading-[1.3]" dir="auto" title={rotationTitle(s, lang)}>{rotationTitle(s, lang)}</span>
                 </button>
               </th>
             ))}

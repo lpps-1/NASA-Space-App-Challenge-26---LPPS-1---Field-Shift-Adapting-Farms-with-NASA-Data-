@@ -11,14 +11,14 @@ Browser (Vite + React SPA)
  ├─ api/kisanClient.js ── entity-style data client  ◄── the only swap point
  └─ data/fixtures.js ── all stubbed data
 
-Netlify (today): static hosting + SPA redirect (netlify.toml)
+Vercel (today): static hosting + SPA rewrite (vercel.json) + serverless functions in api/ (handlers in server/functions)
 
-Netlify (target, see PLAN.md):
- ├─ Netlify Identity ── accounts, password reset, roles (admin for /knowledge)
- ├─ Netlify Functions /api/* ── profile, fields, tasks, knowledge, weather
- ├─ Netlify Blobs ── records (Netlify Database is not on this plan)
- ├─ Netlify Blobs ── leaf photos, voice clips
- └─ Netlify AI Gateway ── chat assistant, knowledge-grounded answers, image diagnosis
+Next steps (see PLAN.md):
+ ├─ Online accounts ── accounts, password reset, roles (admin for /knowledge)
+ ├─ Vercel functions /api/* ── profile, fields, tasks, knowledge, weather
+ ├─ A server database ── records
+ ├─ File storage ── leaf photos, voice clips
+ └─ Google Gemini ── chat assistant, knowledge-grounded answers, image diagnosis
 ```
 
 ## Data flow

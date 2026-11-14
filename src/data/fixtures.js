@@ -1,7 +1,7 @@
 /**
  * All stubbed data for Pakistan Kisan AI lives in this one module.
  * The data client (src/api/kisanClient.js) seeds from here. Later milestones
- * (PLAN.md) replace the client internals with Netlify Functions + Netlify
+ * (PLAN.md) replace the client internals with Vercel functions + a server
  * Database, while the pages stay unchanged.
  */
 
@@ -176,7 +176,7 @@ export const DEFAULT_PROFILE = {
 };
 
 export const DEFAULT_SETTINGS = {
-  voice_replies: true,
+  voice_replies: false, // spoken replies are off until the farmer turns them on
   voice_language: "auto", // "auto" | "ur-PK" | "pa-PK" | "en-PK"
   tts_voice: "", // voiceURI chosen in Settings; "" = pick the best Urdu voice automatically
   speech_rate: 1,
@@ -313,6 +313,13 @@ export const INPUT_PRICES_AS_OF = "November 2026";
 /** Typical seed prices in Pakistan (Rs per kg; sugarcane = setts, potato = seed tubers). Farmers can edit them in the tool. */
 export const SEED_PRICES = { Wheat: 180, Rice: 400, Cotton: 500, Sugarcane: 12, Maize: 1400, Potato: 120 };
 
+/**
+ * Approximate US retail prices for the calculators when the country is the United States, in US dollars.
+ * Fertilizer per 50 kg bag (from typical 2026 retail prices per ton); seed per kg. Farmers can type their own.
+ */
+export const US_INPUT_PRICES_USD = { urea: 32, dap: 42, sop: 52 };
+export const US_SEED_PRICES_USD = { Wheat: 0.8, Rice: 1.4, Cotton: 10, Sugarcane: 0.1, Maize: 13, Potato: 0.6 };
+
 /** Regions for the calculators. "intl" = outside Pakistan (amounts default to US dollars). */
 export const TOOL_REGIONS = [
   { id: "punjab", name: "Punjab" },
@@ -321,7 +328,7 @@ export const TOOL_REGIONS = [
   { id: "balochistan", name: "Balochistan" },
   { id: "gb", name: "Gilgit-Baltistan" },
   { id: "ajk", name: "Azad Jammu & Kashmir" },
-  { id: "intl", name: "Outside Pakistan" },
+  { id: "intl", name: "United States" },
 ];
 
 /** Backup exchange rates (Rs per unit) when live rates can't be loaded. */

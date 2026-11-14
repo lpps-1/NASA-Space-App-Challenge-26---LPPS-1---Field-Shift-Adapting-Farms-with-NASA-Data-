@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Calculator, Droplets, FlaskConical, Landmark, ScanLine, Wheat } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import FormField, { inputClass } from "@/components/FormField";
-import { FALLBACK_RATES, FERTILIZER_GUIDE, INPUT_PRICES, INPUT_PRICES_AS_OF, SEED_PRICES, TOOL_REGIONS, TOOLS } from "@/data/fixtures";
+import { FALLBACK_RATES, FERTILIZER_GUIDE, INPUT_PRICES, INPUT_PRICES_AS_OF, SEED_PRICES, TOOL_REGIONS, TOOLS, US_INPUT_PRICES_USD, US_SEED_PRICES_USD } from "@/data/fixtures";
+import Flag from "@/components/Flag";
 import { useProfile, useSettings, useUpdateSettings } from "@/hooks/useKisanData";
 import { IrrigationTool, ProblemTool, SchemesTool } from "@/components/tools/ExtraTools";
 import { cn } from "@/lib/utils";
@@ -91,13 +92,13 @@ function CropAcreInputs({ crop, setCrop, acres, setAcres }) {
   );
 }
 
-function ToolPanel({ id, m, regionName }) {
+function ToolPanel({ id, m, regionName, avg, seedAvg }) {
   const { t } = useT();
   const [crop, setCrop] = useState("Wheat");
   const [acres, setAcres] = useState(6);
   const [yieldMaunds, setYield] = useState(45);
   const [salePrice, setSalePrice] = useState(3500); // Rs per 40 kg
-  const [seedPrices, setSeedPrices] = useState(SEED_PRICES); // Rs per kg, per crop
+  const [seedPrices, setSeedPrices] = useState(seedAvg); // Rs per kg, per crop
   const { data: settings } = useSettings();
   const saveSettings = useUpdateSettings();
   const own = settings?.input_prices || {};
@@ -108,9 +109,9 @@ function ToolPanel({ id, m, regionName }) {
 
   const fert = useMemo(() => {
     const urea = g.urea * acres, dap = g.dap * acres, sop = g.sop * acres;
-    const price = (k) => (Number(own[k]) > 0 ? Number(own[k]) : INPUT_PRICES[k]);
+    const price = (k) => (Number(own[k]) > 0 ? Number(own[k]) : avg[k]);
     return { urea, dap, sop, cost: urea * price("urea") + dap * price("dap") + sop * price("sop") };
-  }, [g, acres, own]);
+  }, [g, acres, own, avg]);
 
   if (id === "irrigation") return <IrrigationTool />;
   if (id === "disease") return <ProblemTool />;
@@ -122,7 +123,7 @@ function ToolPanel({ id, m, regionName }) {
       { key: "dap", label: "DAP", bags: fert.dap, per: g.dap },
       { key: "sop", label: "SOP", bags: fert.sop, per: g.sop },
     ];
-    const avgCost = rows.reduce((a2, r) => a2 + r.bags * INPUT_PRICES[r.key], 0);
+    const avgCost = rows.reduce((a2, r) => a2 + r.bags * avg[r.key], 0);
     return (
       <>
         <CropAcreInputs {...{ crop, setCrop, acres, setAcres }} />
@@ -140,13 +141,13 @@ function ToolPanel({ id, m, regionName }) {
             <tbody>
               {rows.map((r) => {
                 const mine = Number(own[r.key]) > 0 ? Number(own[r.key]) : null;
-                const price = mine ?? INPUT_PRICES[r.key];
-                const diff = mine != null ? mine - INPUT_PRICES[r.key] : 0;
+                const price = mine ?? avg[r.key];
+                const diff = mine != null ? mine - avg[r.key] : 0;
                 return (
                   <tr key={r.key} className="border-t border-border">
                     <td className="p-3 font-medium">{r.label}</td>
                     <td className="p-3 tabular-nums">{t("{n} bags", { n: r.bags })}<span className="block text-[11px] text-muted-foreground">{t("{n} per acre", { n: r.per })}</span></td>
-                    <td className="p-3 tabular-nums text-muted-foreground">{rs(INPUT_PRICES[r.key])}</td>
+                    <td className="p-3 tabular-nums text-muted-foreground">{rs(avg[r.key])}</td>
                     <td className="p-3">
                       <input
                         type="number"
@@ -154,7 +155,7 @@ function ToolPanel({ id, m, regionName }) {
                         step={m.currency === "PKR" ? 50 : 0.5}
                         className={cn(inputClass, "w-28 py-1.5")}
                         value={mine != null ? Math.round(m.fromRs(mine) * 100) / 100 : ""}
-                        placeholder={String(Math.round(m.fromRs(INPUT_PRICES[r.key]) * 100) / 100)}
+                        placeholder={String(Math.round(m.fromRs(avg[r.key]) * 100) / 100)}
                         aria-label={`${t("Your price per bag")}: ${r.label}`}
                         data-testid={`own-price-${r.key}`}
                         onChange={(e) => setOwn(r.key, e.target.value === "" ? null : m.toRs(Number(e.target.value)))}
@@ -219,6 +220,8 @@ function ToolPanel({ id, m, regionName }) {
   return null;
 }
 
+const regionId0 = (r) => r || "punjab";
+
 /** The farmer's province from their profile, as a calculator region id. */
 function regionFromProfile(p) {
   const name = String(p?.province || "").toLowerCase();
@@ -241,6 +244,22 @@ export default function Tools() {
       if (profile.country === "US") setCurrency("USD");
     }
   }, [profile, region]);
+  // Country for the calculators: Pakistan or the United States. It sets the regions, the prices and the currency.
+  const country = regionId0(region) === "intl" ? "US" : "PK";
+  const setCountry = (c) => {
+    if (c === country) return;
+    setRegion(c === "US" ? "intl" : regionFromProfile(profile?.country === "US" ? null : profile));
+    setCurrency(c === "US" ? "USD" : "PKR");
+  };
+  const usdRs = rates?.USD || FALLBACK_RATES.USD;
+  const avg = useMemo(
+    () => (country === "US" ? Object.fromEntries(Object.entries(US_INPUT_PRICES_USD).map(([k, v]) => [k, v * usdRs])) : INPUT_PRICES),
+    [country, usdRs]
+  );
+  const seedAvg = useMemo(
+    () => (country === "US" ? Object.fromEntries(Object.entries(US_SEED_PRICES_USD).map(([k, v]) => [k, v * usdRs])) : SEED_PRICES),
+    [country, usdRs]
+  );
   const regionId = region || "punjab";
   const regionName = TOOL_REGIONS.find((r) => r.id === regionId)?.name;
   const m = money(currency, rates);
@@ -252,8 +271,30 @@ export default function Tools() {
   return (
     <>
       <PageHeader eyebrow={t("Tools")} title={t("Farm calculators")} description={t("Quick answers for the decisions you make every season.")} />
+      <div className="mb-5 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t("Country")} data-testid="tools-country">
+        <span className="me-1 text-sm text-muted-foreground">{t("Country")}:</span>
+        {[
+          ["PK", t("Pakistan")],
+          ["US", t("United States")],
+        ].map(([c, label]) => (
+          <button
+            key={c}
+            type="button"
+            role="radio"
+            aria-checked={country === c}
+            onClick={() => setCountry(c)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors focus-ring",
+              country === c ? "border-primary bg-primary/10 font-medium" : "border-border hover:bg-secondary"
+            )}
+          >
+            <Flag country={c} className="h-4 w-6" /> {label}
+          </button>
+        ))}
+        <span className="text-xs text-muted-foreground">{country === "US" ? t("US dollars and typical US prices") : t("Rupees and typical Pakistani prices")}</span>
+      </div>
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        <ul className="grid content-start gap-2 self-start sm:grid-cols-2 lg:sticky lg:top-6 lg:grid-cols-1">
           {TOOLS.map((x) => {
             const Icon = ICONS[x.icon];
             return (
@@ -285,7 +326,7 @@ export default function Tools() {
           <div className={cn("mb-6 mt-5 grid gap-4 border-b pb-5 sm:grid-cols-2 [border-color:hsl(var(--edge))]", !usesMoney && "hidden")}>
             <FormField label={t("Region")}>
               <select className={inputClass} value={regionId} onChange={(e) => changeRegion(e.target.value)}>
-                {TOOL_REGIONS.map((r) => <option key={r.id} value={r.id}>{t(r.name)}</option>)}
+                {TOOL_REGIONS.filter((r) => (country === "US" ? r.id === "intl" : r.id !== "intl")).map((r) => <option key={r.id} value={r.id}>{t(r.name)}</option>)}
               </select>
             </FormField>
             <FormField label={t("Currency")}>
@@ -301,7 +342,7 @@ export default function Tools() {
             )}
           </div>
           {!usesMoney && <div className="mt-5" />}
-          <ToolPanel id={active} m={m} regionName={regionName} />
+          <ToolPanel key={`${active}-${country}`} id={active} m={m} regionName={regionName} avg={avg} seedAvg={seedAvg} />
         </section>
       </div>
     </>

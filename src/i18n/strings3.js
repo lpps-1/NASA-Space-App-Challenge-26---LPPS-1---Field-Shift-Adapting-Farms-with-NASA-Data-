@@ -85,4 +85,12 @@ export const R3 = {
   "The datasets named in the NASA challenge. Climate history and slope feed every rotation score; the satellite maps show the conditions around your farm.": [
     "ناسا چیلنج میں بتائے گئے ڈیٹا سیٹ۔ موسمی تاریخ اور ڈھلوان ہر ہیر پھیر کے اسکور میں شامل ہیں؛ سیٹلائٹ نقشے آپ کے فارم کے ارد گرد کے حالات دکھاتے ہیں۔",
   ],
+  "Kisan AI covers Pakistan and the United States only. Other countries are greyed out.": ["کسان AI صرف پاکستان اور امریکہ کا احاطہ کرتا ہے۔ باقی ممالک سرمئی دکھائے گئے ہیں۔", "کسان AI صرف پاکستان تے امریکہ نوں ویکھدا اے۔ باقی ملک سلیٹی وکھائے گئے نیں۔"],
+  "Set your farm location under My farm to see your farm on the map.": ["نقشے پر اپنا فارم دیکھنے کے لیے 'میرا فارم' میں اپنے فارم کا مقام درج کریں۔"],
+  "Show your plans": ["اپنے منصوبے دکھائیں", "اپنے منصوبے وکھاؤ"],
+  "Hide your plans": ["اپنے منصوبے چھپائیں", "اپنے منصوبے لکاؤ"],
+  "Speak aloud": ["بول کر سنائیں", "بول کے سناؤ"],
+  "US dollars and typical US prices": ["امریکی ڈالر اور امریکہ کی عام قیمتیں"],
+  "Rupees and typical Pakistani prices": ["روپے اور پاکستان کی عام قیمتیں"],
+  "On: Kisan AI reads every answer to you. The same switch is under the message box in the chat.": ["آن: کسان AI ہر جواب پڑھ کر سناتا ہے۔ یہی بٹن گفتگو میں پیغام کے خانے کے نیچے بھی ہے۔"],
 };

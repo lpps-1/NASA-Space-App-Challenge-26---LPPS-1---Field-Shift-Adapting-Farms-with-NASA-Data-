@@ -6,7 +6,7 @@ Each milestone is small and self-contained. Pages talk only to `src/api/kisanCli
 Base44 SDK and Vite plugin removed. Every original route was rebuilt in the original design system and runs on stubbed data (`src/data/fixtures.js`): auth screens, Dashboard, Assistant with voice, Onboarding, Profile, Tools, Calendar, Settings and Knowledge base. The app deploys to Netlify as a static SPA.
 
 ## ✅ Pakistan geography (part of 2 and 6, done ahead)
-- `db/geo/pakistan.mjs`: all 7 provinces/territories, 38 divisions, 168 districts with HQ coordinates, 580 tehsils/talukas, served in memory by `netlify/lib/geo.mjs` (Netlify Database was removed: it isn't available on this account's plan).
+- `db/geo/pakistan.mjs`: all 7 provinces/territories, 38 divisions, 168 districts with HQ coordinates, 580 tehsils/talukas, served in memory by `server/lib/geo.mjs` (Netlify Database was removed: it isn't available on this account's plan).
 - `/api/geo` (provinces, province → divisions/districts, district → tehsils, search, nearest) and `/api/weather?district=` (live Open-Meteo for the district's coordinates, with an advisory).
 - `LocationPicker` in Onboarding and Profile. The assistant's weather tool resolves places through the database first.
 - Follow-ups: per-tehsil coordinates (the column exists, currently null), Urdu district names, and a review of any districts notified after 2026-11.
@@ -28,7 +28,7 @@ Base44 SDK and Vite plugin removed. Every original route was rebuilt in the orig
 - Decide whether to keep `/mfa` (phone OTP needs an SMS provider) or remove it.
 
 ## ✅ Milestone 4 — Kisan AI assistant (done ahead of 2/3)
-- `/api/assistant` (Claude via Netlify AI Gateway) streams NDJSON replies. It has a live-weather tool (Open-Meteo) and a system prompt built from the profile, fields, published knowledge articles and a Pakistan agro-zone reference (`netlify/lib/prompt.mjs`).
+- `/api/assistant` (Claude via Netlify AI Gateway) streams NDJSON replies. It has a live-weather tool (Open-Meteo) and a system prompt built from the profile, fields, published knowledge articles and a Pakistan agro-zone reference (`server/lib/prompt.mjs`).
 - `/api/transcribe` (Gemini audio via AI Gateway) does server-side speech recognition for Urdu, English and Punjabi.
 - Voice in the browser (`src/lib/voice.js`): MediaRecorder with silence auto-stop, WAV upload, and sentence-streamed speechSynthesis. Includes a hands-free conversation mode.
 - Conversation history is saved through `kisan.entities.Conversation`, which is localStorage for now. Moving it to Netlify Database belongs to Milestone 2.

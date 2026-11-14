@@ -23,7 +23,7 @@ import Onboarding from '@/pages/Onboarding';
 import Profile from '@/pages/Profile';
 import Tools from '@/pages/Tools';
 import Calendar from '@/pages/Calendar';
-import Settings from '@/pages/Settings';
+import OpenSettings from '@/components/OpenSettings';
 import KnowledgeAdmin from '@/pages/KnowledgeAdmin';
 import Privacy from '@/pages/Privacy';
 import FieldPage from '@/pages/FieldPage';
@@ -85,7 +85,7 @@ const AuthenticatedApp = () => {
           <Route path="/rotation" element={<Rotation />} />
           <Route path="/tools" element={<Tools />} />
           <Route path="/calendar" element={<Calendar />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<OpenSettings />} />
           <Route path="/knowledge" element={<DataSources />} />
           <Route path="/knowledge/admin" element={<KnowledgeAdmin />} />
         </Route>

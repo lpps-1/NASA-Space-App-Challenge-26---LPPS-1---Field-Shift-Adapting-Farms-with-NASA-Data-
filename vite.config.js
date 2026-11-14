@@ -8,7 +8,7 @@ const root = path.dirname(fileURLToPath(import.meta.url))
 
 /**
  * Local development only: serves /api/* from the same handlers Vercel runs
- * (netlify/functions/*.mjs), so `npm run dev` has live NASA climate, weather and chat.
+ * (server/functions/*.mjs), so `npm run dev` has live NASA climate, weather and chat.
  * Keys come from .env.local (git-ignored), e.g. GEMINI_API_KEY.
  */
 function localApi() {
@@ -21,7 +21,7 @@ function localApi() {
         const m = /^\/api\/([a-z-]+)(\/[^?]*)?(\?.*)?$/.exec(req.url || "");
         if (!m) return next();
         try {
-          const file = path.resolve(root, "netlify/functions", `${m[1]}.mjs`);
+          const file = path.resolve(root, "server/functions", `${m[1]}.mjs`);
           const { default: handler } = await import(pathToFileURL(file).href);
           const hasBody = req.method !== "GET" && req.method !== "HEAD";
           const request = new Request(`http://${req.headers.host}${req.url}`, {
