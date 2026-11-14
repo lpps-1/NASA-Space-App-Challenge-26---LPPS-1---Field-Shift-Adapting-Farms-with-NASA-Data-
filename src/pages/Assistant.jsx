@@ -46,6 +46,7 @@ import {
 import { cn } from "@/lib/utils";
 import { detectLanguage } from "@/lib/language";
 import BrandMark from "@/components/BrandMark";
+import { greetingName } from "@/lib/profile";
 import PlansPanel from "@/components/chat/PlansPanel";
 import { setActiveConversation } from "@/lib/chatBus";
 import { useT } from "@/i18n";
@@ -122,7 +123,7 @@ function Message({ msg, speaking, saved, onSpeak, onStopSpeaking, onRetry, onCon
             </div>
           )}
           {msg.streaming && !msg.content && (
-            <span className="flex items-center gap-2 text-muted-foreground" dir="ltr">
+            <span className="mt-0.5 flex h-7 items-center gap-2 text-muted-foreground" dir="ltr">
               {msg.status === "weather" ? (
                 <span className="soft-pulse inline-flex items-center gap-1.5">
                   <CloudSun className="h-4 w-4" /> {t("Checking live weather…")}
@@ -216,9 +217,9 @@ export default function Assistant() {
   // Wide screens: the plans panel can be hidden, like a closable side panel. Remembered on this device.
   const [plansCollapsed, setPlansCollapsed] = useState(() => {
     try {
-      return localStorage.getItem("kisan-plans-collapsed") === "1";
+      return localStorage.getItem("kisan-plans-collapsed") !== "0"; // closed unless the farmer opened it
     } catch {
-      return false;
+      return true;
     }
   });
   const togglePlansCollapsed = () =>
@@ -776,6 +777,18 @@ export default function Assistant() {
 
   const live = phase !== "idle" || busy;
 
+  // Nothing to scroll on an empty chat: keep the page still.
+  const empty = messages.length === 0;
+  useEffect(() => {
+    if (!empty) return;
+    const el = document.documentElement;
+    const prev = el.style.overflow;
+    el.style.overflow = "hidden";
+    return () => {
+      el.style.overflow = prev;
+    };
+  }, [empty]);
+
   const heard = langName(voiceLang);
   const statusLine = {
     recording:
@@ -783,7 +796,6 @@ export default function Assistant() {
         ? t("Listening{lang}… take your time. Tap the microphone when you've finished.", { lang: voiceLang !== "auto" && heard ? ` (${t(heard)})` : "" })
         : t("Listening{lang}… speak naturally, I'll answer when you stop.", { lang: voiceLang !== "auto" && heard ? ` (${t(heard)})` : "" }),
     transcribing: t("Recognising your speech…"),
-    thinking: t("Kisan AI is preparing an answer…"),
     speaking:
       handsFree && listenRef.current.bargeIn
         ? t("Speaking… just start talking to interrupt.")
@@ -800,7 +812,12 @@ export default function Assistant() {
 
   return (
     <div className={cn("grid gap-5", !plansCollapsed && "xl:grid-cols-[minmax(0,1fr)_300px]")}>
-            <section className="flex min-h-[calc(100vh-4.5rem)] min-w-0 flex-col lg:min-h-[calc(100vh-2rem)]">
+      <section
+        className={cn(
+          "flex min-w-0 flex-col",
+          messages.length === 0 ? "h-[calc(100dvh-4.5rem)] overflow-hidden lg:h-[calc(100dvh-2rem)]" : "min-h-[calc(100dvh-4.5rem)] lg:min-h-[calc(100dvh-2rem)]"
+        )}
+      >
         {/* Sleek top: no title or description, just a button to show or hide the plans panel. */}
         <div className="flex justify-end">
           <button
@@ -815,13 +832,16 @@ export default function Assistant() {
           </button>
         </div>
 
-        <div className="mx-auto w-full max-w-3xl flex-1 space-y-7 py-8" aria-live="polite">
+        <div className={cn("mx-auto w-full max-w-3xl flex-1", messages.length === 0 ? "flex flex-col justify-center pb-6" : "space-y-7 py-8")} aria-live="polite">
           {messages.length === 0 && (
-            <div className="py-10 text-center sm:py-16">
-              <BrandMark className="mx-auto h-10 w-10" />
-              <h2 className="mt-5 font-display text-2xl sm:text-3xl">{t("How can I help on your farm today?")}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{t("Type a question, or tap the microphone and speak.")}</p>
-              <div className="mx-auto mt-8 flex max-w-2xl flex-wrap justify-center gap-2">
+            <div className="px-1" data-testid="chat-welcome">
+              <h1 className="kisan-greeting font-display text-4xl font-bold leading-tight tracking-tight sm:text-5xl" dir="auto">
+                {t("Hi, {name}", { name: greetingName(profile) })}
+              </h1>
+              <p className="mt-1 font-display text-3xl font-semibold leading-tight tracking-tight text-muted-foreground/70 sm:text-4xl">
+                {t("How can I help on your farm today?")}
+              </p>
+              <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
                 {suggestions.map((p) => (
                   <button
                     key={p}
@@ -831,7 +851,7 @@ export default function Assistant() {
                     }}
                     dir={isRtl(p) ? "rtl" : "ltr"}
                     className={cn(
-                      "rounded-full border bg-card px-3.5 py-2 text-sm text-foreground/85 transition-colors hover:bg-secondary hover:text-foreground focus-ring [border-color:hsl(var(--edge))]",
+                      "rounded-2xl border bg-card/60 px-4 py-3 text-start text-sm text-foreground/85 transition-colors hover:bg-secondary hover:text-foreground focus-ring [border-color:hsl(var(--edge))]",
                       isRtl(p) && "urdu text-[14px]"
                     )}
                   >
@@ -959,29 +979,6 @@ export default function Assistant() {
               data-testid="composer"
             />
             <div className="mt-1 flex items-center gap-1 px-1">
-            <button
-              type="button"
-              onClick={onMic}
-              disabled={phase === "transcribing"}
-              className={cn(
-                "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors focus-ring disabled:opacity-60",
-                phase === "recording"
-                  ? "border-alert bg-alert text-white"
-                  : "border-border bg-card text-foreground hover:bg-secondary"
-              )}
-              aria-label={phase === "recording" ? t("Stop recording and send") : phase === "speaking" ? t("Interrupt and speak") : t("Speak your question")}
-              title={phase === "recording" ? t("Stop recording and send") : t("Speak your question")}
-              data-testid="mic"
-            >
-              {phase === "recording" && <span className="mic-ring bg-alert/50" aria-hidden="true" />}
-              {phase === "recording" ? (
-                <Square className="relative h-4 w-4 fill-current" />
-              ) : phase === "transcribing" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </button>
             {/* Voice controls sit under the message box, like Claude's composer. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
                 <label className="inline-flex h-9 items-center gap-1 rounded-full px-2.5 text-xs text-muted-foreground hover:bg-secondary">
@@ -1035,12 +1032,37 @@ export default function Assistant() {
                   <span className="hidden sm:inline">{t("Speak aloud")}</span>
                 </button>
             </div>
-            {busy && phase !== "thinking" ? (
+            <button
+              type="button"
+              onClick={onMic}
+              disabled={phase === "transcribing"}
+              className={cn(
+                "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors focus-ring disabled:opacity-60",
+                phase === "recording"
+                  ? "border-alert bg-alert text-white"
+                  : "border-border bg-card text-foreground hover:bg-secondary"
+              )}
+              aria-label={phase === "recording" ? t("Stop recording and send") : phase === "speaking" ? t("Interrupt and speak") : t("Speak your question")}
+              title={phase === "recording" ? t("Stop recording and send") : t("Speak your question")}
+              data-testid="mic"
+            >
+              {phase === "recording" && <span className="mic-ring bg-alert/50" aria-hidden="true" />}
+              {phase === "recording" ? (
+                <Square className="relative h-4 w-4 fill-current" />
+              ) : phase === "transcribing" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
+            {busy ? (
               <button
                 type="button"
                 onClick={stopEverything}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-card text-foreground hover:bg-secondary focus-ring"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-colors hover:bg-foreground/85 focus-ring"
                 aria-label={t("Stop answer")}
+                title={t("Stop answer")}
+                data-testid="stop-answer"
               >
                 <Square className="h-3.5 w-3.5 fill-current" />
               </button>

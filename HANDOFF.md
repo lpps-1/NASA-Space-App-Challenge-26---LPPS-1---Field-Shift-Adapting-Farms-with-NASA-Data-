@@ -33,7 +33,13 @@ This file is how they tell each other what was done last and what is left.
 
 **Last updated:** 14 Nov 2026
 
-**Last task done:** second round of Majid's feedback (one commit, 14 Nov afternoon):
+**Last task done:** third round (chat polish, 14 Nov ~15:45):
+- Chat: no separate "preparing an answer" bar; the send arrow becomes a stop button while Kisan AI answers. Mic sits next to the send arrow. Thinking dots line up with the avatar.
+- Plans panel is closed by default (`kisan-plans-collapsed` defaults to closed); the top-right button opens it on the right.
+- Empty chat fits one screen with no scrolling, with a Gemini-style welcome: gradient "Hi, {name}" (`.kisan-greeting` in `index.css`), question line and suggestion cards.
+- Footer: separators between the bottom links, and a note that only Pakistan and US data are shown for now.
+
+**Before that:** second round of Majid's feedback (one commit, 14 Nov afternoon):
 - **Hosting is Vercel, not Netlify.** The old `netlify/` folder is now `server/` (`server/functions/*.mjs` handlers, `server/lib/` shared code); `api/*.js` are the Vercel entry points; `netlify.toml` is gone; `server/lib/gemini.mjs` only reads `GEMINI_API_KEY` (no Netlify AI Gateway). Docs and policies say Vercel.
 - **Chat works with Gemini** once `GEMINI_API_KEY` is set in Vercel (Settings → Environment Variables, then redeploy). Locally it's in `.env.local` (git-ignored; never commit the key). Tested: answers stream.
 - **Chat page**: no title/description at the top; language, Conversation mode and Speak aloud sit under the message box like Claude; send arrow points right (left in Urdu); spoken replies **off by default**; the plans panel can be hidden (button top-right, remembered in `kisan-plans-collapsed`).
