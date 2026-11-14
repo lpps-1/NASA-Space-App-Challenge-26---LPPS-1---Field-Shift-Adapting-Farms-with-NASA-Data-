@@ -38,7 +38,7 @@ import { openSettings } from "@/lib/settingsDialog";
 
 // Kisan AI (the chat) comes first and is the home page; the rotation planner is the app's main tool.
 const NAV = [
-  { to: "/", label: "Kisan AI", icon: MessagesSquare, end: true },
+  { to: "/chat", label: "Kisan AI", icon: MessagesSquare },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/rotation", label: "Rotation", icon: Repeat },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
@@ -89,7 +89,7 @@ function ChatHistory() {
 
   const remove = async (c) => {
     await ops.remove.mutateAsync(c.id);
-    if (c.id === activeId) navigate(`/?new=${Date.now()}`);
+    if (c.id === activeId) navigate(`/chat?new=${Date.now()}`);
   };
 
   return (
@@ -100,7 +100,7 @@ function ChatHistory() {
         {recent.map((c) => (
           <li key={c.id} className="group flex items-center rounded-lg hover:bg-sidebar-accent/60">
             <button
-              onClick={() => navigate(`/?c=${c.id}`)}
+              onClick={() => navigate(`/chat?c=${c.id}`)}
               dir="auto"
               title={c.title}
               className={cn(
@@ -207,7 +207,7 @@ function SidebarContent({ collapsed, onToggle, onClose }) {
 
       <div className={cn("shrink-0 px-2", collapsed && "flex flex-col items-center")}>
         <button
-          onClick={() => navigate(`/?new=${Date.now()}`)}
+          onClick={() => navigate(`/chat?new=${Date.now()}`)}
           title={collapsed ? t("New chat") : undefined}
           className={cn("mb-1 flex h-9 items-center gap-3 rounded-lg text-sm font-medium text-white hover:bg-sidebar-accent/60 focus-ring", collapsed ? "w-9 justify-center" : "w-full px-2")}
           data-testid="new-chat"
@@ -234,7 +234,7 @@ function SidebarContent({ collapsed, onToggle, onClose }) {
 export default function Layout() {
   const { t } = useT();
   const { pathname } = useLocation();
-  const isChat = pathname === "/";
+  const isChat = pathname === "/chat";
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [drawer, setDrawer] = useState(false);
 

@@ -208,7 +208,7 @@ export default function FieldPage() {
             {row(t("Estimated stage"), est ? `${t(est.stage)}${est.day != null && est.day >= 0 ? ` (${t("day {d} of about {n}", { d: est.day, n: est.of })})` : ""}` : null)}
             {row(t("Estimated harvest"), yieldEst ? `${t("{n} maunds", { n: yieldEst.toLocaleString("en-PK") })} \u2068(${((yieldEst * 40) / 1000).toFixed(1)} t)\u2069` : null)}
           </dl>
-          <Link to={`/?q=${encodeURIComponent(question)}`} className="kisan-btn-primary mt-5 w-full focus-ring">
+          <Link to={`/chat?q=${encodeURIComponent(question)}`} className="kisan-btn-primary mt-5 w-full focus-ring">
             <MessagesSquare className="h-4 w-4" /> {t("Ask Kisan AI about this field")}
           </Link>
         </section>

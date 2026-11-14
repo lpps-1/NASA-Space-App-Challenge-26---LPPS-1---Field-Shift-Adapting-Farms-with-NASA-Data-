@@ -218,7 +218,7 @@ export function ProblemTool() {
       <FormField label={t("Add details (optional)")}>
         <textarea className={cn(inputClass, "min-h-[72px] resize-y")} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("Describe it: which part of the plant, how much of the field, since when")} dir="auto" maxLength={300} />
       </FormField>
-      <Link to={`/?q=${encodeURIComponent(question)}`} className="kisan-btn-gold w-full focus-ring">
+      <Link to={`/chat?q=${encodeURIComponent(question)}`} className="kisan-btn-gold w-full focus-ring">
         <MessagesSquare className="h-4 w-4" aria-hidden="true" /> {t("Ask Kisan AI about this problem")}
       </Link>
       <p className="text-xs text-muted-foreground">{t("A checklist, not a diagnosis. Do not spray on a guess: confirm with your extension officer or a plant clinic, and take a sample plant with you.")}</p>
@@ -258,7 +258,7 @@ export function SchemesTool() {
                 <a href={s.href} target="_blank" rel="noreferrer" className="kisan-btn-ghost px-3 py-1.5 text-xs focus-ring">
                   {t("Official page")} <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 </a>
-                <Link to={`/?q=${encodeURIComponent(`Explain ${s.name} (${s.by}) for my farm: who qualifies, what documents I need and how to apply.`)}`} className="kisan-btn-ghost px-3 py-1.5 text-xs focus-ring">
+                <Link to={`/chat?q=${encodeURIComponent(`Explain ${s.name} (${s.by}) for my farm: who qualifies, what documents I need and how to apply.`)}`} className="kisan-btn-ghost px-3 py-1.5 text-xs focus-ring">
                   <MessagesSquare className="h-3.5 w-3.5" aria-hidden="true" /> {t("Ask Kisan AI")}
                 </Link>
               </div>

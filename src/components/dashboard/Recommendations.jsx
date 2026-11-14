@@ -21,7 +21,7 @@ export default function Recommendations({ items = [] }) {
               <p className="text-sm font-semibold leading-snug">{t(r.title, r.vars)}</p>
               <p className="mt-1.5 flex-1 text-xs leading-relaxed text-muted-foreground">{t(r.body, r.vars)}</p>
               <Link
-                to={`/?q=${encodeURIComponent(r.ask)}`}
+                to={`/chat?q=${encodeURIComponent(r.ask)}`}
                 className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:underline"
               >
                 {t("Ask Kisan AI")} <ArrowUpRight className="h-3.5 w-3.5 rtl:-scale-x-100" aria-hidden="true" />

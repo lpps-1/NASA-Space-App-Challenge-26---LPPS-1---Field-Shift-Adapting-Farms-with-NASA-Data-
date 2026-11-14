@@ -102,4 +102,6 @@ export const R3 = {
   "Warnings": ["انتباہ", "خبرداری"],
   "No problems reported": ["کوئی مسئلہ درج نہیں", "کوئی مسئلہ درج نئیں"],
   "Report a problem": ["مسئلہ بتائیں", "مسئلہ دسو"],
+  "Season clock": ["موسمی گھڑی", "موسمی گھڑی"],
+  "Your crop year as a clock, with today marked": ["آپ کا فصلی سال گھڑی کی شکل میں، آج کے دن کے نشان کے ساتھ"],
 };

@@ -21,7 +21,7 @@ export default function RecentConversations({ conversations = [] }) {
     <section className="kisan-card p-5 sm:p-6" aria-labelledby="recent-title">
       <div className="flex items-center justify-between">
         <h2 id="recent-title" className="kisan-label">{t("Recent conversations")}</h2>
-        <Link to="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+        <Link to="/chat" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           {t("New chat")} <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </Link>
       </div>
@@ -36,7 +36,7 @@ export default function RecentConversations({ conversations = [] }) {
             const spoken = c.messages?.some((m) => m.voice);
             return (
               <li key={c.id}>
-                <Link to={`/?c=${encodeURIComponent(c.id)}`} className="flex items-center gap-3 py-2.5 hover:text-primary focus-ring">
+                <Link to={`/chat?c=${encodeURIComponent(c.id)}`} className="flex items-center gap-3 py-2.5 hover:text-primary focus-ring">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
                     {spoken ? <Mic className="h-4 w-4" aria-hidden="true" /> : <MessagesSquare className="h-4 w-4" aria-hidden="true" />}
                   </span>

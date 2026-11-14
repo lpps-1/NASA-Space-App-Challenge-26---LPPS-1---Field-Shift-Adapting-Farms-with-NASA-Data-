@@ -391,6 +391,13 @@
   color: transparent;
 }
 
+/* Season clock: the satellite circles the dial, the season arcs draw in. */
+@keyframes season-orbit { to { transform: rotate(360deg); } }
+.season-orbit { animation: season-orbit 28s linear infinite; }
+@keyframes season-arc { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.season-arc { stroke-dasharray: 1; animation: season-arc 1.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.season-arc-2 { animation-delay: 0.35s; }
+
 /* Dialogs and sheets. */
 @keyframes kisan-sheet {
   from { opacity: 0; transform: translateY(18px) scale(0.98); }
@@ -429,6 +436,6 @@
 .lang-rtl .kisan-grow { transform-origin: right; }
 
 @media (prefers-reduced-motion: reduce) {
-  .kisan-pop, .kisan-sheet, .kisan-fade, .wx-draw, .kisan-grow, .kisan-dialog, .kisan-overlay, .kisan-drawer, .kisan-menu { animation: none; }
+  .kisan-pop, .kisan-sheet, .kisan-fade, .wx-draw, .kisan-grow, .kisan-dialog, .kisan-overlay, .kisan-drawer, .kisan-menu, .season-orbit, .season-arc { animation: none; }
   .wx-path { transition: none; }
 }

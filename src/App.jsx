@@ -32,10 +32,10 @@ import DataSources from '@/pages/DataSources';
 import Terms from '@/pages/Terms';
 // Add page imports here
 
-/** Old /assistant links (with ?q=) open the chat, which is now the home page. */
+/** Old /assistant links (with ?q=) open the chat at /chat. The dashboard is the start page. */
 function ToChat() {
   const { search } = useLocation();
-  return <Navigate to={`/${search}`} replace />;
+  return <Navigate to={`/chat${search}`} replace />;
 }
 
 const AuthenticatedApp = () => {
@@ -77,7 +77,8 @@ const AuthenticatedApp = () => {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route element={<FarmSetupGate />}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Assistant />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/chat" element={<Assistant />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/assistant" element={<ToChat />} />
           <Route path="/profile" element={<Profile />} />

@@ -43,13 +43,13 @@ export default function DashboardHeader({ profile }) {
           </div>
 
           <div className="flex flex-wrap gap-2.5">
-            <Link to="/" className="kisan-btn-gold focus-ring">
+            <Link to="/chat" className="kisan-btn-gold focus-ring">
               <MessagesSquare className="h-4 w-4" aria-hidden="true" />
               {t("Ask Kisan AI")}
               <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
             </Link>
             <Link
-              to="/?voice=1"
+              to="/chat?voice=1"
               className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-ring"
             >
               <Mic className="h-4 w-4 text-harvest" aria-hidden="true" />

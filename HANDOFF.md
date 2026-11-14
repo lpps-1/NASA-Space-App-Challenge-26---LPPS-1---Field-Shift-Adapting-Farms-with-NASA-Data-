@@ -33,7 +33,18 @@ This file is how they tell each other what was done last and what is left.
 
 **Last updated:** 14 Nov 2026
 
-**Last task done:** third round (chat polish, 14 Nov ~15:45):
+**Branch rule (from Majid):** `majid` is the master branch, `abdullah` is the slave. Majid's Claude merges Abdullah's new commits into `majid` (majid wins any conflict), then pushes `majid` and `main`. **Abdullah's Claude: please `git pull origin main` before starting work.** Your branch is behind main, so a deploy from `abdullah` looks like Majid's chat changes were reverted.
+
+**Last task done:** fourth round (14 Nov ~16:15):
+- **Start page is the dashboard.** The chat moved from `/` to **`/chat`**; `/` redirects to `/dashboard`. Every chat link now uses `/chat?q=…`, `/chat?c=…`, `/chat?new=…`, `/chat?voice=1`. Use these from now on.
+- **Field cards** (`FieldsOverview.jsx`): each card is a CSS subgrid of 6 rows (name · sown date · season progress · typical harvest · warnings · button), so every row starts at the same height in all cards. A "Warnings" heading is always shown ("No problems reported" when empty). "Report a problem" is a real full-width button.
+- **Season clock** (new `src/components/dashboard/SeasonClock.jsx`), in the dashboard's right column under the jobs, sticky while scrolling: crop-year dial with winter/summer arcs that draw in, a hand that sweeps to today, and an orbiting satellite. CSS: `.season-orbit`, `.season-arc` in `index.css`.
+- **Chat bug fix** (`server/functions/assistant.mjs`): the model sometimes copied the internal "Reply language for this turn" note into the answer; the stream now holds back and drops it. The prompt also says never to write it.
+- **Merged Abdullah's `30c181b` (larger globe) and `ef5d155` (`abdullah_handoff.md`) into `majid`.**
+- New strings in `src/i18n/strings3.js`: "Warnings", "No problems reported", "Report a problem", "Season clock".
+- Live chat check: production (kisaaaaan.vercel.app) answers. Preview deployments (`test-…-team-lpps-1.vercel.app`) are behind Vercel login and need `GEMINI_API_KEY` set for the **Preview** environment too.
+
+**Before that:** third round (chat polish, 14 Nov ~15:45):
 - Chat: no separate "preparing an answer" bar; the send arrow becomes a stop button while Kisan AI answers. Mic sits next to the send arrow. Thinking dots line up with the avatar.
 - Plans panel is closed by default (`kisan-plans-collapsed` defaults to closed); the top-right button opens it on the right.
 - Empty chat fits one screen with no scrolling, with a Gemini-style welcome: gradient "Hi, {name}" (`.kisan-greeting` in `index.css`), question line and suggestion cards.

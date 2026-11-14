@@ -40,7 +40,7 @@ function ReportProblem({ field, onClose }) {
     onClose();
     if (thenAsk) {
       const stage = estimateStage(field)?.stage;
-      navigate(`/?q=${encodeURIComponent(`My ${field.crop} in ${field.name}${stage ? ` (${stage} stage)` : ""} has a problem: ${issueLabel(type)}${note.trim() ? `. ${note.trim()}` : ""}. What is the likely cause and what should I do?`)}`);
+      navigate(`/chat?q=${encodeURIComponent(`My ${field.crop} in ${field.name}${stage ? ` (${stage} stage)` : ""} has a problem: ${issueLabel(type)}${note.trim() ? `. ${note.trim()}` : ""}. What is the likely cause and what should I do?`)}`);
     }
   };
 

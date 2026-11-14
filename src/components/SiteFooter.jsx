@@ -9,7 +9,7 @@ import { useT } from "@/i18n";
 const VERSION = "v1.3";
 
 const EXPLORE = [
-  ["Kisan AI chat", "/"],
+  ["Kisan AI chat", "/chat"],
   ["Dashboard", "/dashboard"],
   ["Rotation planner", "/rotation"],
   ["Calendar", "/calendar"],

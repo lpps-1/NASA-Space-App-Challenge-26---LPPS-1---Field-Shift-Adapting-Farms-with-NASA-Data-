@@ -15,7 +15,7 @@ import { useT } from "@/i18n";
 
 const CROP_YEAR = { PK: [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9], US: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] };
 const CROP_COLORS = ["bg-harvest", "bg-field", "bg-sky-500/70", "bg-harvest/50"];
-const ask = (q) => `/?q=${encodeURIComponent(q)}`;
+const ask = (q) => `/chat?q=${encodeURIComponent(q)}`;
 
 const PRIORITIES = [
   { key: "water", label: "Save water", icon: Droplets },

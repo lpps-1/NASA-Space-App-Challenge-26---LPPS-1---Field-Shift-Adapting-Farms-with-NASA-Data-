@@ -5,7 +5,7 @@ import { IRRIGATION_OPTIONS } from "@/data/fixtures";
 import { goalOf, rotationOf } from "@/lib/farmSetup";
 import { useT } from "@/i18n";
 
-const ask = (q) => `/?q=${encodeURIComponent(q)}`;
+const ask = (q) => `/chat?q=${encodeURIComponent(q)}`;
 
 /** The farmer's setup answers on the dashboard: crop year, water and goals, each one tap from Kisan AI. */
 export default function FarmPlan({ profile }) {
