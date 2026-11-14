@@ -73,6 +73,10 @@ How it works:
 - **A shared "Tasks left" list** shows what still needs doing. A Claude puts its name next to a task before starting it, so both can work on different tasks at once without doing the same one twice.
 - **Read it first.** At the start of every session, each Claude runs `git fetch origin`, reads the other branch's copy (`git show origin/majid:HANDOFF.md` or `git show origin/abdullah:HANDOFF.md`), and updates its own section after every finished task.
 
+## A note on the bulk upload and the Claude notes
+
+Because our work was pushed to GitHub in bulk (see the note at the top), the Claude assistants sometimes took that code for earlier, already-existing work when they first read the repository, and a few early notes in `HANDOFF.md` and the project docs describe it that way ("received", "existing", "from the export"). That reading is wrong. All of it was built by our team during the hackathon and only uploaded together later, because the internet connection was too poor to push as we went.
+
 ## Project docs
 
 - `HANDOFF.md`: notes between Majid's Claude and Abdullah's Claude (last task done, tasks left)
