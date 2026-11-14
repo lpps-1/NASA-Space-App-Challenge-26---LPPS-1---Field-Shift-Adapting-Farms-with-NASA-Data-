@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef } from "react";
-import { geoArea, geoCentroid, geoGraticule10, geoOrthographic, geoPath } from "d3-geo";
+import { geoArea, geoCentroid, geoDistance, geoGraticule10, geoOrthographic, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
+import Flag from "@/components/Flag";
 import { useT } from "@/i18n";
 
 /** ISO 3166-1 alpha-2 → numeric id used by world-atlas. Add a row when a country is supported. */
 const NUMERIC_ID = { PK: "586", US: "840" };
 const REDUCED = "(prefers-reduced-motion: reduce)";
+const SWAY_DEGREES = 38; // how far the globe turns either side of the farm
+const SWAY_SECONDS = 16; // one full back-and-forth
 
 const countries = feature(world, world.objects.countries).features;
 const graticule = geoGraticule10();
@@ -28,38 +31,49 @@ function focusPoint(country) {
 }
 
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+const finite = (n) => typeof n === "number" && Number.isFinite(n);
 
 /**
- * A dark globe that spins into view and settles on the farmer's country,
- * which is lit up in harvest yellow while the rest of the world fades into the edges.
+ * A dark globe that spins into view and turns slowly from side to side around the farmer's
+ * region. The country is lit in harvest yellow, a pulsing marker with a flag on a pole
+ * sits on the farm, and the sides of the globe fade to black. Pakistan and the US only.
  */
-export default function CountryGlobe({ country = "PK", className = "" }) {
+export default function CountryGlobe({ profile, className = "" }) {
   const { lang } = useT();
   const wrapRef = useRef(null);
   const canvasRef = useRef(null);
+  const pinRef = useRef(null);
+
+  const country = NUMERIC_ID[profile?.country] ? profile.country : "PK";
+  const lat = profile?.lat;
+  const lng = profile?.lng;
 
   const target = useMemo(() => {
-    const id = NUMERIC_ID[country] || NUMERIC_ID.PK;
-    const shape = countries.find((c) => String(c.id) === id);
-    return { shape, point: focusPoint(shape) };
-  }, [country]);
+    const shape = countries.find((c) => String(c.id) === NUMERIC_ID[country]);
+    const centre = focusPoint(shape);
+    // The farm itself when we know where it is; otherwise the middle of the country.
+    const farm = finite(lat) && finite(lng) ? [lng, lat] : null;
+    return { shape, centre, farm };
+  }, [country, lat, lng]);
 
-  const label = useMemo(() => {
+  const countryName = useMemo(() => {
     try {
-      return new Intl.DisplayNames([lang === "en" ? "en" : "ur"], { type: "region" }).of(NUMERIC_ID[country] ? country : "PK");
+      return new Intl.DisplayNames([lang === "en" ? "en" : "ur"], { type: "region" }).of(country);
     } catch {
       return target.shape.properties.name;
     }
   }, [country, lang, target]);
+  const region = [profile?.district, profile?.province].filter(Boolean).join(", ");
 
   useEffect(() => {
     const wrap = wrapRef.current;
     const canvas = canvasRef.current;
+    const pin = pinRef.current;
     if (!wrap || !canvas) return undefined;
     const ctx = canvas.getContext("2d");
     if (!ctx) return undefined;
 
-    const [lon, lat] = target.point;
+    const [lon, lt] = target.farm || target.centre;
     const reduced = window.matchMedia?.(REDUCED).matches;
     const projection = geoOrthographic().clipAngle(90);
     const path = geoPath(projection, ctx);
@@ -67,7 +81,7 @@ export default function CountryGlobe({ country = "PK", className = "" }) {
     let frame = 0;
     let started = 0;
 
-    const draw = (rotation) => {
+    const draw = (rotation, now) => {
       const r = size / 2 - 3;
       const c = size / 2;
       projection.translate([c, c]).scale(r).rotate(rotation);
@@ -128,17 +142,48 @@ export default function CountryGlobe({ country = "PK", className = "" }) {
       ctx.strokeStyle = "rgba(120,220,170,0.28)";
       ctx.lineWidth = 1.2;
       ctx.stroke();
+
+      // Location marker: a dot with two ripples, and the flag pole on top of it.
+      const xy = target.farm ? projection(target.farm) : null;
+      const facing = target.farm && geoDistance(target.farm, [-rotation[0], -rotation[1]]) < 1.35;
+      if (xy && facing) {
+        const [x, y] = xy;
+        if (!reduced) {
+          for (const offset of [0, 0.5]) {
+            const phase = (((now || 0) / 2200 + offset) % 1);
+            ctx.beginPath();
+            ctx.arc(x, y, size * (0.015 + phase * 0.07), 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(242,201,76,${0.8 * (1 - phase)})`;
+            ctx.lineWidth = 1.4;
+            ctx.stroke();
+          }
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.017, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "#123D2A";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        if (pin) {
+          pin.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+          pin.style.opacity = "1";
+        }
+      } else if (pin) {
+        pin.style.opacity = "0";
+      }
     };
 
-    const resting = [-lon, -lat * 0.9];
+    const resting = [-lon, -lt * 0.9];
     const render = (now) => {
       if (!started) started = now;
-      const t = Math.min((now - started) / 2400, 1);
-      const spin = (1 - easeOutCubic(t)) * 160;
-      // After arriving, sway a few degrees so it feels alive without leaving the country.
-      const sway = reduced || t < 1 ? 0 : Math.sin((now - started) / 2600) * 2.5;
-      draw([resting[0] - spin + sway, resting[1] - (1 - easeOutCubic(t)) * 12]);
-      if (!reduced) frame = requestAnimationFrame(render);
+      const elapsed = now - started;
+      const t = Math.min(elapsed / 2400, 1);
+      const arriving = 1 - easeOutCubic(t);
+      // After arriving the globe turns slowly left and right, so the farm stays in view.
+      const turn = t < 1 ? 0 : Math.sin(((elapsed - 2400) / 1000 / SWAY_SECONDS) * Math.PI * 2) * SWAY_DEGREES;
+      draw([resting[0] - arriving * 160 + turn, resting[1] - arriving * 12], now);
+      frame = requestAnimationFrame(render);
     };
 
     const resize = () => {
@@ -151,7 +196,7 @@ export default function CountryGlobe({ country = "PK", className = "" }) {
       canvas.style.width = `${size}px`;
       canvas.style.height = `${size}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (reduced) draw(resting);
+      if (reduced) draw(resting, 0);
     };
 
     resize();
@@ -165,12 +210,21 @@ export default function CountryGlobe({ country = "PK", className = "" }) {
   }, [target]);
 
   return (
-    <figure className={`flex shrink-0 flex-col items-center gap-1.5 ${className}`} data-testid="country-globe">
-      <div ref={wrapRef} className="h-[112px] w-[112px] sm:h-[168px] sm:w-[168px]">
-        <canvas ref={canvasRef} role="img" aria-label={label} />
+    <figure className={`flex shrink-0 flex-col items-center gap-2 ${className}`} data-testid="country-globe">
+      <div ref={wrapRef} className="relative h-[120px] w-[120px] sm:h-[184px] sm:w-[184px] lg:h-[216px] lg:w-[216px]">
+        <canvas ref={canvasRef} role="img" aria-label={[region, countryName].filter(Boolean).join(", ")} />
+        {/* A flag on a pole planted at the farm; the canvas moves it with the globe. */}
+        <div ref={pinRef} className="pointer-events-none absolute left-0 top-0 h-0 w-0 opacity-0" aria-hidden="true">
+          <span className="absolute bottom-0 left-0 h-[24px] w-px -translate-x-1/2 bg-white/90" />
+          <Flag country={country} className="absolute bottom-[10px] left-0 h-[15px] w-[22px] rounded-[2px]" />
+        </div>
       </div>
-      <figcaption className="text-[11px] font-semibold uppercase tracking-wider text-white/60" dir="auto">
-        {label}
+      <figcaption className="flex flex-col items-center gap-0.5 text-center" dir="auto">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/90">
+          <Flag country={country} className="h-3.5 w-5 rounded-[2px]" />
+          {region || countryName}
+        </span>
+        {region && <span className="text-[11px] font-semibold uppercase tracking-wider text-white/55">{countryName}</span>}
       </figcaption>
     </figure>
   );

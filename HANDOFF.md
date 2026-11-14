@@ -64,7 +64,7 @@ This file is how they tell each other what was done last and what is left.
 - `src/pages/Rotation.jsx`: the "Side by side" table is now full width with equal columns, a sticky measure column, the open rotation as one highlighted band, the best value in each row as a green pill, and +/- changes against what the farmer grows now. Irrigation and bare months are marked "lower is better". Mobile scrolls the table sideways inside its card.
 - Page rows now share the same left and right edges: hero, two equal control cards (priorities, weather what-if), the table, the details, climate beside soil survey (equal height), the map, the ranked list (now a real table) and the disclaimer. The old sticky right-hand sidebar is gone.
 - New English-only labels (they fall back to English in Urdu/Punjabi until translated, see task 13): "Higher scores are better. Tap a column to open its details below.", "Best in the row", "vs what you grow now", "Open below", "Tap for details", "Lower is better", "Swipe sideways to see every option.", "Rotation", "Score".
-- Dashboard globe (task 11): `CountryGlobe.jsx` beside the greeting; add a country to `NUMERIC_ID` to support it. New deps `d3-geo`, `topojson-client`, `world-atlas`.
+- Dashboard globe (task 11): `CountryGlobe.jsx` beside the greeting. It now takes `profile` and centres on the farm (`lat`/`lng`), with a pulsing marker, a flag on a pole at the farm, a slow left-right turn, and a caption with flag, region and country. Pakistan and US only; add a country to `NUMERIC_ID` (and a flag in `Flag.jsx`) to support another. New deps `d3-geo`, `topojson-client`, `world-atlas`.
 
 **Working on now:** nothing.
 

@@ -39,7 +39,7 @@ export default function DashboardHeader({ profile }) {
             {t("Your weather, crops and next jobs in one place. Ask Kisan AI about your crops, soil, water and livestock, typed or spoken.")}
           </p>
         </div>
-        <CountryGlobe country={profile?.country} />
+        <CountryGlobe profile={profile} />
       </div>
 
       <div className="relative mt-6 flex flex-wrap gap-2.5">
