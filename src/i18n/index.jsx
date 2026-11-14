@@ -40,6 +40,8 @@ const fill = (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? 
 
 export function translate(lang, key, vars) {
   const row = STRINGS[key];
+  // Dev only: collect texts with no translation, to list with `[...__i18nMiss]` in the console.
+  if (!row && lang !== "en" && import.meta.env?.DEV && typeof key === "string" && /[a-z]{3}/i.test(key)) (globalThis.__i18nMiss ||= new Set()).add(key);
   const s = lang === "en" || !row ? key : row[lang] || row.ur || key;
   return fill(s, vars);
 }

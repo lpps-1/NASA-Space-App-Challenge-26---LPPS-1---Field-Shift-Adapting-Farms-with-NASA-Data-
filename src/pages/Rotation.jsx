@@ -1,3 +1,4 @@
+import { localizeRotation, monthLabel } from "@/lib/rotationText";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -102,7 +103,7 @@ function CropYear({ s, lang, order, legend = true }) {
 }
 
 function Section({ title, items, tone: cls, className }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   if (!items?.length) return null;
   return (
     <div className={cn("h-full rounded-xl border border-border bg-secondary/30 p-4", className)}>
@@ -111,7 +112,7 @@ function Section({ title, items, tone: cls, className }) {
         {items.map((x, i) => (
           <li key={i} className="flex gap-2">
             <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current opacity-50" />
-            <span>{x}</span>
+            <span>{localizeRotation(x, lang)}</span>
           </li>
         ))}
       </ul>
@@ -314,7 +315,7 @@ function Details({ s, plan, lang, order, chosen, onChoose }) {
       </div>
       <div className="mt-4">
         <CropYear s={s} lang={lang} order={order} />
-        {s.bare_months.length > 0 && <p className="mt-1 text-[11px] text-alert">{t("Bare: {months}", { months: s.bare_months.map(monthName).join(", ") })}</p>}
+        {s.bare_months.length > 0 && <p className="mt-1 text-[11px] text-alert">{t("Bare: {months}", { months: s.bare_months.map((m) => monthLabel(monthName(m), lang)).join(lang === "en" ? ", " : "، ") })}</p>}
       </div>
       <div className="mt-5 grid items-stretch gap-4 md:grid-cols-2">
         {blocks.map((b, i) => (
@@ -498,7 +499,7 @@ export default function Rotation() {
       </section>
 
       {/* Controls sit right above the table they re-rank: two equal cards on one row. */}
-      <div className="grid items-stretch gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2">
         <section className="kisan-card p-5 sm:p-6">
           <h2 className="font-display text-lg">{t("What matters to you")}</h2>
           <p className="mt-1 text-xs text-muted-foreground">{t("Set from your season goals. Move a slider to re-rank.")}</p>
@@ -529,13 +530,13 @@ export default function Rotation() {
       <Details s={selected} plan={plan} lang={lang} order={order} chosen={profile.planned_rotation === selected.id} onChoose={choose} />
 
       {/* Satellite readings that feed the scores, and the second (statistical) method. */}
-      <div className="grid items-stretch gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         <SatelliteFeatures sat={sat} loading={satLoading} current={plan.current} grid={slopeGrid} />
         <MethodsCompared statistical={plan.statistical} lang={lang} />
       </div>
 
       {/* Climate and soil survey: same row, same height. */}
-      <div className="grid items-stretch gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
         {climateLoading ? <div className="kisan-card h-64 animate-pulse" /> : <ClimatePanel climate={climate} scenario={scenario} order={order} />}
 
         <section className="kisan-card p-5 text-sm sm:p-6" data-testid="land-survey">
@@ -543,7 +544,7 @@ export default function Rotation() {
           <p className="mt-1 text-xs text-muted-foreground">{land.source}{land.live && <span className="ms-2 rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">{t("Live")}</span>}</p>
           {soilLoading && us && <div className="mt-3 h-16 animate-pulse rounded-xl bg-secondary" />}
           <ul className="mt-4 space-y-1.5 leading-relaxed">
-            {land.lines.map((x) => <li key={x}>{x}</li>)}
+            {land.lines.map((x) => <li key={x}>{localizeRotation(x, lang)}</li>)}
             {!land.lines.length && !soilLoading && <li className="text-muted-foreground">{us ? t("The USDA soil survey has no data for this point.") : t("No province-level survey figures for this area.")}</li>}
           </ul>
           {land.waterlog && (

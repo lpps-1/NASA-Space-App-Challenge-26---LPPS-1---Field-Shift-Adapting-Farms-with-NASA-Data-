@@ -1,6 +1,7 @@
 // Checks for the rotation planner (src/lib/rotation.js). Run: npm run test:rotation
 import assert from "node:assert/strict";
 import { bareMonths, currentStrategy, monthsOf, planRotations, scoreStrategy, STRATEGIES, weightsFromGoals } from "../src/lib/rotation.js";
+import { hasRotationRule, localizeRotation } from "../src/lib/rotationText.js";
 
 // Faisalabad-like climatology (NASA POWER, rounded): rain mm/month, max and min °C.
 const RAIN = [14, 22, 30, 22, 20, 35, 95, 90, 45, 8, 4, 10];
@@ -57,8 +58,7 @@ test("rain-fed farms block thirsty rotations", () => {
   assert.ok(r.blocked);
 });
 
-test("plan returns current + 3 alternatives with explanations", () => {
-  // ---- Satellite readings, machines, markets, statistical check (Nov 2026).
+// ---- Satellite readings, machines, markets, statistical check (Nov 2026).
 const sat = {
   groundwater: { value: -20, date: "2022-07-01" },
   soil_moisture: { value: 0.3, date: "2026-11-10" },
@@ -108,7 +108,8 @@ test("20-year statistical check ranks rotations and reports agreement", () => {
   assert.equal(planRotations({ profile: { current_crops: ["Wheat", "Rice"] }, climate }).statistical, null);
 });
 
-const plan = planRotations({ profile: { current_crops: ["Wheat"], crops: ["Cotton"], goals: ["water", "soil"], soil_type: "Loam", irrigation_methods: ["canal", "tubewell"] }, climate });
+test("plan returns current + 3 alternatives with explanations", () => {
+  const plan = planRotations({ profile: { current_crops: ["Wheat"], crops: ["Cotton"], goals: ["water", "soil"], soil_type: "Loam", irrigation_methods: ["canal", "tubewell"] }, climate });
   assert.equal(plan.top.length, 4);
   assert.ok(plan.top[0].isCurrent);
   assert.equal(new Set(plan.top.map((s) => s.id)).size, 4);
@@ -129,6 +130,35 @@ test("works without NASA data", () => {
 test("goal weights", () => {
   assert.equal(weightsFromGoals(["water"]).water, 3);
   assert.equal(weightsFromGoals(["livestock"]).forage, 2);
+});
+
+test("every planner sentence for a Pakistan farm has an Urdu/Punjabi rule", () => {
+  const dry = { ...sat, soil_moisture: { value: 0.1, date: "2026-11-10" }, ground_temp: { value: 41, date: "2026-11-10" } };
+  const farms = [
+    { current_crops: ["Wheat", "Cotton"], ...irrigated, equipment: ["tractor"], markets: ["mandi", "contract", "livestock", "home"] },
+    { current_crops: ["Wheat", "Rice"], irrigation_methods: ["rainfed"], soil_type: "Saline / kallar", province: "Sindh" },
+    { current_crops: ["Sugarcane"], ...irrigated, markets: ["mandi"] },
+  ];
+  const lands = [
+    { sat: dry, terrain: { elevation_m: 183, slope_pct: 4, erosion_risk: "medium" }, lines: ["Punjab: about 2.7 million hectares mapped as salt-affected (Soil Survey of Pakistan)."], waterlog: "high", live: false },
+    { sat: { ...sat, soil_moisture: { value: 0.45, date: "2026-11-10" } }, slopeGrid: { summary: { cells: 49, high: 6, medium: 10, low: 33, max_slope_pct: 11 } }, lines: [], waterlog: "high", live: false },
+    {},
+  ];
+  const missing = new Set();
+  farms.forEach((profile, i) => {
+    for (const cl of [climate, null]) {
+      const p = planRotations({ profile, climate: cl, land: lands[i] });
+      for (const s of p.ranked) {
+        const e = s.explain;
+        for (const x of [...e.why, ...e.benefits, ...e.evidence, ...e.risks, ...e.gaps, ...(s.sat_effects || []).map((y) => y.text)]) {
+          if (typeof x === "string" && !hasRotationRule(x)) missing.add(x);
+        }
+      }
+    }
+  });
+  assert.deepEqual([...missing], []);
+  assert.match(localizeRotation("Good fodder for livestock.", "pa"), /ڈنگراں/);
+  assert.equal(localizeRotation("Good fodder for livestock.", "en"), "Good fodder for livestock.");
 });
 
 const plan = planRotations({ profile: { current_crops: ["Wheat"], crops: ["Cotton"], goals: ["water", "soil"] }, climate });

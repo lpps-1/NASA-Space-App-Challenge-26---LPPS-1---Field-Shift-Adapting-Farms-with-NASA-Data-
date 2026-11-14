@@ -59,6 +59,7 @@ export const CROP_URDU = {
   Mango: "آم", Citrus: "کینو / مالٹا",
   Tomato: "ٹماٹر", Chillies: "مرچ", Okra: "بھنڈی", Cauliflower: "پھول گوبھی", Spinach: "پالک", Peas: "مٹر",
   Dates: "کھجور", Guava: "امرود", Banana: "کیلا", Apple: "سیب", Pomegranate: "انار",
+  Berseem: "برسیم", Mungbean: "مونگ", Sorghum: "جوار", Sesame: "تل", Sesbania: "جنتر", "Rye cover crop": "رائی (کور کراپ)",
   Corn: "مکئی", Soybean: "سویابین", "Winter wheat": "سرمائی گندم", "Grain sorghum": "جوار", "Upland cotton": "کپاس", Alfalfa: "لوسرن",
 };
 

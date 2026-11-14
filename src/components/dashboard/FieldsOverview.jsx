@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 
 /** Estimated harvest in maunds (40 kg), from acres × a typical Pakistani yield for the crop. */
 const estimate = (f) => (TYPICAL_YIELD[f.crop] ? Math.round(Number(f.acres || 0) * TYPICAL_YIELD[f.crop]) : null);
-const STAGES = ["Germination", "Vegetative growth", "Flowering", "Ripening", "Ready to harvest"];
 const STAGE_AT = [0, 0.1, 0.4, 0.65, 0.95];
 export const ISSUE_TYPES = [
   { id: "pest", label: "Insects or pests" },

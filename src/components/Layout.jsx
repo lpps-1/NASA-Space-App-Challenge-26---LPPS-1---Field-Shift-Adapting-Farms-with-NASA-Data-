@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import * as Menu from "@radix-ui/react-dropdown-menu";
+import { toast } from "sonner";
 import { useT } from "@/i18n";
 import SiteFooter from "@/components/SiteFooter";
 import {
@@ -90,6 +91,8 @@ function ChatHistory() {
   const remove = async (c) => {
     await ops.remove.mutateAsync(c.id);
     if (c.id === activeId) navigate(`/chat?new=${Date.now()}`);
+    // A slip of the finger shouldn't lose a conversation: offer to put it back.
+    toast(t("Chat deleted"), { action: { label: t("Undo"), onClick: () => ops.create.mutate(c) } });
   };
 
   return (
@@ -113,7 +116,7 @@ function ChatHistory() {
             </button>
             <button
               onClick={() => remove(c)}
-              className="me-1 rounded-md p-1 text-sidebar-foreground/50 opacity-0 hover:text-alert focus:opacity-100 group-hover:opacity-100 focus-ring"
+              className="me-1 rounded-md p-1 text-sidebar-foreground/50 opacity-60 hover:text-alert focus:opacity-100 group-hover:opacity-100 md:opacity-0 focus-ring"
               aria-label={`${t("Delete conversation")} ${c.title}`}
             >
               <Trash2 className="h-3.5 w-3.5" />

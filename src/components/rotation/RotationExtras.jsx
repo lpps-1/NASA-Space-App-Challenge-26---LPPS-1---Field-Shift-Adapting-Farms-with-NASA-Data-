@@ -4,6 +4,7 @@ import { EQUIPMENT, MARKETS, monthName, rotationTitle } from "@/lib/rotation";
 import { useUpdateProfile } from "@/hooks/useKisanData";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
+import { localizeRotation } from "@/lib/rotationText";
 
 /** Chips that toggle one value in a list saved on the farm profile. */
 function ChipList({ items, value = [], onToggle }) {
@@ -74,7 +75,7 @@ const SAT_ROWS = [
 
 /** Every satellite reading at the farm, its date and what it changes in the scores. */
 export function SatelliteFeatures({ sat, loading, current, grid }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   return (
     <section className="kisan-card p-5 text-sm sm:p-6" data-testid="satellite-features">
       <h2 className="flex items-center gap-2 font-display text-lg"><Satellite className="h-4 w-4 text-harvest" aria-hidden="true" />{t("Satellite readings in the scores")}</h2>
@@ -108,7 +109,7 @@ export function SatelliteFeatures({ sat, loading, current, grid }) {
         <div className="mt-4 rounded-xl bg-secondary/60 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Effect on your current rotation")}</p>
           <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed">
-            {current.sat_effects.map((e) => <li key={e.text}>{e.text}</li>)}
+            {current.sat_effects.map((e) => <li key={e.text}>{localizeRotation(e.text, lang)}</li>)}
           </ul>
         </div>
       )}

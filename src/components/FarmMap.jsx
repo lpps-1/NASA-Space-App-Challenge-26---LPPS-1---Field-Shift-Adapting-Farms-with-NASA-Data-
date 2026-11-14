@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, GeoJSON, MapContainer, Polygon, Rectangle, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Check, Globe2, LocateFixed, Mountain, Plus, Satellite, TriangleAlert, X } from "lucide-react";
+import { Check, Eye, EyeOff, Globe2, LocateFixed, Mountain, Plus, Satellite, TriangleAlert, X } from "lucide-react";
 import { useProfile, useSlopeGrid, useTerrain } from "@/hooks/useKisanData";
 import VegetationLayer from "@/components/map/VegetationLayer";
 import { useT } from "@/i18n";
@@ -29,10 +29,10 @@ export const NASA_LAYERS = [
     max: 9,
     legend: null,
     key: [
-      ["#14534b", "Forest and woodland (MODIS land cover)"],
-      ["#e8891c", "Orchards and fruit trees: farmland green all year"],
-      ["#cddc39", "Field crops, light: thin, young or ripening"],
-      ["#388e3c", "Field crops, bright: dense and growing well"],
+      ["#14534b", "Forest and woodland (MODIS land cover)", "forest"],
+      ["#e8891c", "Orchards and fruit trees: farmland green all year", "orchard"],
+      ["#cddc39", "Field crops, light: thin, young or ripening", "crops_light"],
+      ["#388e3c", "Field crops, bright: dense and growing well", "crops_bright"],
       ["transparent", "Clear: bare soil, desert, water, towns"],
     ],
   },
@@ -89,7 +89,7 @@ export const NASA_LAYERS = [
 ];
 
 
-// Only Pakistan and the United States are covered: everything else is greyed out with a mask
+// Only Pakistan and the United States are covered: everything else is lightly dimmed with a mask
 // (the whole world as one polygon, with the two countries cut out as holes).
 const swap = (ring) => ring.map(([lng, lat]) => [lat, lng]);
 const HOLES = COVERED.features.flatMap((f) =>
@@ -101,7 +101,37 @@ const WORLD = [
   [89.9, 360],
   [-89.9, 360],
 ];
-const boundsOf = (id) => L.geoJSON(COVERED.features.find((f) => f.properties.id === id)).getBounds();
+const VIEW = {
+  // The US outline includes the Aleutian islands across the 180° line, so its own bounds span the
+  // whole world. The view button shows the lower 48 states instead.
+  US: L.latLngBounds([24.3, -125], [49.5, -66.9]),
+};
+const boundsOf = (id) => VIEW[id] || L.geoJSON(COVERED.features.find((f) => f.properties.id === id)).getBounds();
+
+/**
+ * Satellite data is shown only inside Pakistan and the United States: the data pane is clipped to
+ * their outlines (in layer pixels, redone after every zoom). Other countries keep the plain base map
+ * with grey borders.
+ */
+function DataPane() {
+  const map = useMap();
+  if (!map.getPane("kisanData")) {
+    const p = map.createPane("kisanData");
+    p.style.zIndex = 250;
+    p.style.pointerEvents = "none";
+  }
+  useEffect(() => {
+    const pane = map.getPane("kisanData");
+    const clip = () => {
+      const d = HOLES.map((ring) => "M" + ring.map((ll) => { const pt = map.latLngToLayerPoint(ll); return `${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`; }).join("L") + "Z").join("");
+      pane.style.clipPath = `path('${d}')`;
+    };
+    clip();
+    map.on("zoomend viewreset", clip);
+    return () => map.off("zoomend viewreset", clip);
+  }, [map]);
+  return null;
+}
 
 /** Moves the map when a view button is pressed. */
 function FlyTo({ target }) {
@@ -151,6 +181,22 @@ export default function FarmMap({ className }) {
   const [opacity, setOpacity] = useState(0.75);
   const active = NASA_LAYERS.filter((l) => layerIds.includes(l.id)); // chip order, for the legend
   useEffect(() => saveLayers(layerIds), [layerIds]);
+  // Vegetation classes the farmer turned off in the legend (forest, orchard, crops_light, crops_bright).
+  const [vegHidden, setVegHidden] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("kisan-map-veg-hidden")) || [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("kisan-map-veg-hidden", JSON.stringify(vegHidden));
+    } catch {
+      /* not saved: fine */
+    }
+  }, [vegHidden]);
+  const toggleVeg = (id) => setVegHidden((h) => (h.includes(id) ? h.filter((x) => x !== id) : [...h, id]));
   // on: true = turn on, false = turn off, undefined = flip.
   const toggleLayer = (id, on) =>
     setLayerIds((ids) => ((on ?? !ids.includes(id)) ? [...new Set([...ids, id])] : ids.filter((x) => x !== id)));
@@ -226,13 +272,15 @@ export default function FarmMap({ className }) {
           {active.map((l) => {
             const z = 200 + STACK.indexOf(l.id) * 10;
             return l.composite ? (
-              <VegetationLayer key={l.id} opacity={opacity} zIndex={z} />
+              <VegetationLayer key={l.id} opacity={opacity} zIndex={z} pane="kisanData" hidden={vegHidden} />
             ) : (
-              <TileLayer key={l.id} url={l.url} opacity={opacity} zIndex={z} maxNativeZoom={l.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
+              <TileLayer key={l.id} pane="kisanData" url={l.url} opacity={opacity} zIndex={z} maxNativeZoom={l.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
             );
           })}
-          {/* Grey out every country the app doesn't cover yet. */}
-          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1f2523" : "#a3aaa7", fillOpacity: 1 }} interactive={false} />
+          {/* Countries the app doesn't cover yet: the base map stays visible (lightly dimmed), with
+              grey borders and no satellite data (the data pane is clipped to PK + US). */}
+          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1f2523" : "#a3aaa7", fillOpacity: 0.3 }} interactive={false} />
+          <TileLayer url={GIBS("Reference_Features_15m", "GoogleMapsCompatible_Level13")} maxNativeZoom={13} maxZoom={19} opacity={0.55} zIndex={640} className="kisan-borders" />
           <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
           <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
           {hasPoint && (
@@ -256,13 +304,14 @@ export default function FarmMap({ className }) {
                 </Rectangle>
               );
             })}
+          <DataPane />
           <FlyTo target={target} />
           {/* Map scale (like Google Maps): metric and miles. */}
           <ScaleControl position="bottomright" imperial metric />
         </MapContainer>
 
         {/* Quick views, on top of the map. */}
-        <div className="pointer-events-none absolute inset-x-2 top-2 z-[500] flex flex-wrap justify-end gap-1.5">
+        <div className="pointer-events-none absolute left-14 right-2 top-2 z-[500] flex flex-wrap justify-end gap-1.5">
           {hasPoint && (
             <button type="button" className={cn(viewBtn, "pointer-events-auto")} onClick={() => setTarget({ point: [profile.lat, profile.lng], at: Date.now() })}>
               <LocateFixed className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> {t("My farm")}
@@ -291,11 +340,16 @@ export default function FarmMap({ className }) {
             <Flag country="US" className="h-3 w-4" /> {t("United States")}
           </button>
         </div>
-        <p className="pointer-events-none absolute bottom-2 start-2 z-[500] flex items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-[11px] shadow-sm backdrop-blur" data-testid="coverage-note">
-          <Globe2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-          {t("Kisan AI covers Pakistan and the United States only. Other countries are greyed out.")}
+        {/* On wide screens the note sits on the map; on phones it goes under it, clear of the scale bar. */}
+        <p className="pointer-events-none absolute bottom-7 start-2 z-[500] hidden max-w-[60%] items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-[11px] shadow-sm backdrop-blur md:flex" data-testid="coverage-note">
+          <Globe2 className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          {t("Kisan AI covers Pakistan and the United States only. Other countries show with grey borders and no satellite data.")}
         </p>
       </div>
+        <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground md:hidden">
+          <Globe2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+          {t("Kisan AI covers Pakistan and the United States only. Other countries show with grey borders and no satellite data.")}
+        </p>
         <aside className="rounded-xl border p-4 text-sm [border-color:var(--card-line)]" aria-label={t("Map legend")} data-testid="map-legend">
           {active.length === 0 && <p className="text-xs text-muted-foreground">{t("No satellite layer is on. Tap a layer above to show it.")}</p>}
           {active.map((layer, i) => (
@@ -312,12 +366,32 @@ export default function FarmMap({ className }) {
               )}
               <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("What the colours mean")}</p>
               <ul className="mt-2 space-y-2">
-                {layer.key.map(([color, text]) => (
-                  <li key={text} className="flex items-start gap-2.5 text-xs leading-relaxed">
-                    <span className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-sm border border-foreground/20" style={{ background: color === "transparent" ? "repeating-linear-gradient(45deg, transparent 0 3px, hsl(var(--muted-foreground) / 0.4) 3px 4px)" : color }} />
-                    <span>{t(text)}</span>
-                  </li>
-                ))}
+                {layer.key.map(([color, text, cls]) => {
+                  const swatch = <span className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-sm border border-foreground/20" style={{ background: color === "transparent" ? "repeating-linear-gradient(45deg, transparent 0 3px, hsl(var(--muted-foreground) / 0.4) 3px 4px)" : color }} />;
+                  if (!cls || !layer.composite)
+                    return (
+                      <li key={text} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                        {swatch}
+                        <span>{t(text)}</span>
+                      </li>
+                    );
+                  const off = vegHidden.includes(cls);
+                  return (
+                    <li key={text}>
+                      <button
+                        type="button"
+                        aria-pressed={!off}
+                        onClick={() => toggleVeg(cls)}
+                        title={off ? t("Tap to show on the map") : t("Tap to hide from the map")}
+                        className={cn("-mx-1 flex w-full items-start gap-2.5 rounded-md px-1 py-0.5 text-start text-xs leading-relaxed hover:bg-secondary focus-ring", off && "opacity-45")}
+                      >
+                        {swatch}
+                        <span className={cn("flex-1", off && "line-through")}>{t(text)}</span>
+                        {off ? <EyeOff className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden="true" />}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -332,7 +406,7 @@ export default function FarmMap({ className }) {
                 <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#5fb36b]/40" />{t("Flat or gentle: under 3%")}</li>
               </>
             )}
-            <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#1f2523] dark:bg-[#1f2523]" style={{ background: theme === "dark" ? "#1f2523" : "#a3aaa7" }} />{t("Countries not covered yet")}</li>
+            <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 shrink-0 rounded-sm border border-muted-foreground/70" style={{ background: theme === "dark" ? "#1f252399" : "#a3aaa799" }} />{t("Countries not covered yet: grey borders, no satellite data")}</li>
           </ul>
           <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">{t("Scroll or use + and − to zoom. The bar in the corner shows distance. Data pixels are coarser than a field, so very close zoom only enlarges them.")}</p>
         </aside>

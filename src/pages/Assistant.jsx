@@ -759,11 +759,6 @@ export default function Assistant() {
 
   newConversationRef.current = newConversation;
 
-  const deleteConversation = async (c) => {
-    await convoMutations.remove.mutateAsync(c.id);
-    if (c.id === convoId) newConversation();
-  };
-
   const setVoiceLanguage = (value) => updateSettings.mutate({ voice_language: value });
 
   // Deep links from the dashboard: ?q=<question>, ?voice=1 (start listening), ?c=<conversation id>.

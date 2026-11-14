@@ -597,5 +597,6 @@ const R = {
 import { R2 } from "./strings2.js";
 import { R3 } from "./strings3.js";
 import { R4 } from "./strings4.js";
+import { R5 } from "./strings5.js";
 
-export const STRINGS = Object.fromEntries(Object.entries({ ...R, ...R2, ...R3, ...R4 }).map(([k, [ur, pa]]) => [k, { ur, pa: pa || ur }]));
+export const STRINGS = Object.fromEntries(Object.entries({ ...R, ...R2, ...R3, ...R4, ...R5 }).map(([k, [ur, pa]]) => [k, { ur, pa: pa || ur }]));

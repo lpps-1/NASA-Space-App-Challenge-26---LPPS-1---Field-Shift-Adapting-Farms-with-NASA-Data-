@@ -79,7 +79,7 @@ function source(layer, time, maxZ, table, { x, y, z }) {
 }
 const at = (s, px, py) => (s ? s.arr[Math.floor(s.oy + py / s.f) * 256 + Math.floor(s.ox + px / s.f)] : NaN);
 
-async function compose(coords) {
+async function compose(coords, hidden = new Set()) {
   const months = monthsBack([2, 4, 6, 8, 10]);
   const [lc, now, ...monthly] = await Promise.all([
     source("MODIS_Combined_L3_IGBP_Land_Cover_Type_Annual", "default", 8, "landcover", coords),
@@ -95,7 +95,7 @@ async function compose(coords) {
       const cls = at(lc, px, py);
       if (Number.isNaN(cls)) continue;
       let rgb = null, alpha = 215;
-      if (FOREST.has(cls)) rgb = VEG_COLORS.forest;
+      if (FOREST.has(cls)) rgb = hidden.has("forest") ? null : VEG_COLORS.forest;
       else if (FARM.has(cls)) {
         let low = Infinity, seen = 0;
         for (const s of mon) {
@@ -106,9 +106,10 @@ async function compose(coords) {
           }
         }
         const g = at(now, px, py);
-        if (seen >= 3 && low >= 0.45) rgb = VEG_COLORS.orchard;
+        if (seen >= 3 && low >= 0.45) rgb = hidden.has("orchard") ? null : VEG_COLORS.orchard;
         else if (!Number.isNaN(g) && g >= 0.3) {
           const k = Math.min(1, (g - 0.3) / 0.45);
+          if (hidden.has(k < 0.5 ? "crops_light" : "crops_bright")) continue;
           rgb = VEG_COLORS.cropLow.map((c, i) => Math.round(c + (VEG_COLORS.cropHigh[i] - c) * k));
           alpha = 150 + Math.round(k * 80);
         }
@@ -127,7 +128,7 @@ const VegGrid = L.GridLayer.extend({
   createTile(coords, done) {
     const tile = document.createElement("canvas");
     tile.width = tile.height = 256;
-    compose(coords)
+    compose(coords, this.options.hidden)
       .then((img) => {
         tile.getContext("2d").putImageData(img, 0, 0);
         done(null, tile);
@@ -137,15 +138,25 @@ const VegGrid = L.GridLayer.extend({
   },
 });
 
-export default function VegetationLayer({ opacity = 1, zIndex = 300 }) {
+export default function VegetationLayer({ opacity = 1, zIndex = 300, pane = "tilePane", hidden = [] }) {
   const map = useMap();
   useEffect(() => {
-    const layer = new VegGrid({ opacity, maxZoom: 19, attribution: "NASA GIBS: MODIS land cover + MODIS NDVI", className: "kisan-data-tiles", zIndex });
+    const layer = new VegGrid({ opacity, maxZoom: 19, attribution: "NASA GIBS: MODIS land cover + MODIS NDVI", className: "kisan-data-tiles", zIndex, pane, hidden: new Set(hidden) });
     layer.addTo(map);
     return () => layer.remove();
   }, [map]); // opacity is updated by the effect below without rebuilding the tiles
   useEffect(() => {
     map.eachLayer((l) => l instanceof VegGrid && l.setOpacity(opacity));
   }, [map, opacity]);
+  const hiddenKey = [...hidden].sort().join(",");
+  useEffect(() => {
+    // Source images are cached, so redrawing with classes hidden or shown is quick.
+    map.eachLayer((l) => {
+      if (l instanceof VegGrid) {
+        l.options.hidden = new Set(hiddenKey ? hiddenKey.split(",") : []);
+        l.redraw();
+      }
+    });
+  }, [map, hiddenKey]);
   return null;
 }
