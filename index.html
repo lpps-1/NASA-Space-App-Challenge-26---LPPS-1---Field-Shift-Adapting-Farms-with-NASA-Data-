@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#082018" />
+    <meta name="description" content="Pakistan Kisan AI — crop advice, weather, farm calendar and a voice assistant in Urdu, Punjabi and English." />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet" />
+    <title>Pakistan Kisan AI</title>
+      <script>
+      // Apply the saved theme before the first paint (dark unless the farmer chose light).
+      try {
+        var t = localStorage.getItem("kisan-theme") === "light" ? "light" : "dark";
+        document.documentElement.classList.toggle("dark", t === "dark");
+        document.documentElement.style.colorScheme = t;
+        var l = localStorage.getItem("kisan-ui-lang");
+        if (l === "ur" || l === "pa") {
+          document.documentElement.dir = "rtl";
+          document.documentElement.lang = l === "ur" ? "ur" : "pnb";
+          document.documentElement.classList.add("lang-rtl");
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
