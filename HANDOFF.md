@@ -60,11 +60,11 @@ This file is how they tell each other what was done last and what is left.
 
 **Last updated:** 14 Nov 2026
 
-**Last task done:** dashboard country globe (task 11).
-- New `src/components/dashboard/CountryGlobe.jsx`: a dark canvas globe beside the greeting ("Hi, Muhammad Aslam"). It spins in and settles on the farmer's country (`profile.country`), which is lit in harvest yellow while the sides of the globe fade to black. Uses `d3-geo` (orthographic), `topojson-client` and `world-atlas` (110m borders); no WebGL.
-- `DashboardHeader.jsx` now lays the greeting and globe side by side (stacks tight on phones, 112 px; 168 px from `sm`).
-- To support another country, add its ISO alpha-2 → numeric id to `NUMERIC_ID` in `CountryGlobe.jsx` (only PK and US today, same as the country picker).
-- Respects `prefers-reduced-motion` (static globe). New deps: `d3-geo`, `topojson-client`, `world-atlas`.
+**Last task done:** Rotations page layout and comparison table (task 12), after the dashboard globe (task 11).
+- `src/pages/Rotation.jsx`: the "Side by side" table is now full width with equal columns, a sticky measure column, the open rotation as one highlighted band, the best value in each row as a green pill, and +/- changes against what the farmer grows now. Irrigation and bare months are marked "lower is better". Mobile scrolls the table sideways inside its card.
+- Page rows now share the same left and right edges: hero, two equal control cards (priorities, weather what-if), the table, the details, climate beside soil survey (equal height), the map, the ranked list (now a real table) and the disclaimer. The old sticky right-hand sidebar is gone.
+- New English-only labels (they fall back to English in Urdu/Punjabi until translated, see task 13): "Higher scores are better. Tap a column to open its details below.", "Best in the row", "vs what you grow now", "Open below", "Tap for details", "Lower is better", "Swipe sideways to see every option.", "Rotation", "Score".
+- Dashboard globe (task 11): `CountryGlobe.jsx` beside the greeting; add a country to `NUMERIC_ID` to support it. New deps `d3-geo`, `topojson-client`, `world-atlas`.
 
 **Working on now:** nothing.
 
@@ -89,3 +89,5 @@ From the project status of 14 Nov 2026 (prototype about 40% done). Put your name
 | 9 | Match the rotation popup's animations and close icon to the LPPS website (need the site URL from Majid) | | ☐ |
 | 10 | Native-speaker check of the new Urdu/Punjabi text in `src/i18n/strings3.js` | | ☐ |
 | 11 | Dashboard: globe beside the greeting that focuses on the farmer's country | Abdullah's Claude | ☑ `CountryGlobe.jsx` |
+| 12 | Rotations page: align sections and tables, clearer side-by-side comparison | Abdullah's Claude | ☑ `Rotation.jsx` |
+| 13 | Native-speaker translation of the new Rotation labels listed under Abdullah's Claude | | ☐ |
