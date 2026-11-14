@@ -271,7 +271,7 @@ export default function Tools() {
   return (
     <>
       <PageHeader eyebrow={t("Tools")} title={t("Farm calculators")} description={t("Quick answers for the decisions you make every season.")} />
-      <div className="mb-5 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t("Country")} data-testid="tools-country">
+      <div className="mb-8 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t("Country")} data-testid="tools-country">
         <span className="me-1 text-sm text-muted-foreground">{t("Country")}:</span>
         {[
           ["PK", t("Pakistan")],
@@ -293,8 +293,8 @@ export default function Tools() {
         ))}
         <span className="text-xs text-muted-foreground">{country === "US" ? t("US dollars and typical US prices") : t("Rupees and typical Pakistani prices")}</span>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-        <ul className="grid content-start gap-2 self-start sm:grid-cols-2 lg:sticky lg:top-6 lg:grid-cols-1">
+      <div className="grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <ul className="grid content-start gap-1 self-start sm:grid-cols-2 lg:sticky lg:top-6 lg:grid-cols-1">
           {TOOLS.map((x) => {
             const Icon = ICONS[x.icon];
             return (
@@ -303,25 +303,25 @@ export default function Tools() {
                   disabled={x.soon}
                   onClick={() => setActive(x.id)}
                   className={cn(
-                    "flex w-full items-start gap-3 rounded-2xl border p-4 text-start transition-all focus-ring active:scale-[0.99] disabled:opacity-55",
-                    active === x.id ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary"
+                    "flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-start transition-colors focus-ring disabled:opacity-55",
+                    active === x.id ? "bg-secondary text-foreground" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
                   )}
                 >
-                  <Icon className="mt-0.5 h-5 w-5 text-primary" aria-hidden="true" />
+                  <Icon className={cn("mt-0.5 h-[18px] w-[18px] shrink-0", active === x.id ? "text-primary" : "")} aria-hidden="true" />
                   <span>
                     <span className="flex items-center gap-2 text-sm font-medium">
                       {t(x.name)}
                       {x.soon && <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">{t("Soon")}</span>}
                     </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{t(x.description)}</span>
+                    <span className="mt-0.5 line-clamp-1 block text-xs text-muted-foreground">{t(x.description)}</span>
                   </span>
                 </button>
               </li>
             );
           })}
         </ul>
-        <section className="kisan-card min-w-0 p-5 sm:p-6" key={active}>
-          <h2 className="font-display text-2xl">{t(tool.name)}</h2>
+        <section className="kisan-card rise-in min-w-0 p-6 sm:p-8" key={active}>
+          <h2 className="text-xl font-semibold tracking-tight">{t(tool.name)}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t(tool.description)}</p>
           <div className={cn("mb-6 mt-5 grid gap-4 border-b pb-5 sm:grid-cols-2 [border-color:hsl(var(--edge))]", !usesMoney && "hidden")}>
             <FormField label={t("Region")}>

@@ -77,7 +77,6 @@ const SECTIONS = [
           <li><strong>NASA</strong> (POWER and GIBS) receives your farm's coordinates or map area to send climate data and satellite maps.</li>
           <li><strong>OpenTopoData</strong> receives your farm's coordinates to send NASA SRTM elevation.</li>
           <li><strong>Open-Meteo</strong> receives your farm's coordinates to send the forecast and air quality.</li>
-          <li><strong>CARTO and OpenStreetMap</strong> send the background map tiles.</li>
           <li><strong>USDA</strong> (Soil Data Access) receives the coordinates of US farms to send soil survey data.</li>
         </ul>
       </>

@@ -76,8 +76,8 @@ const SECTIONS = [
     title: "Data and credits",
     body: (
       <p>
-        Climate data comes from NASA POWER, satellite maps from NASA GIBS (MODIS, SMAP, GPM IMERG, Landsat HLS, GRACE) and elevation from NASA
-        SRTM. NASA does not endorse this app. Forecasts and air quality come from Open-Meteo, background maps from CARTO and OpenStreetMap,
+        Climate data comes from NASA POWER, satellite and background maps from NASA GIBS (MODIS, SMAP, GPM IMERG, Landsat HLS, GRACE, Blue Marble, Black Marble) and elevation from NASA
+        SRTM. NASA does not endorse this app. Forecasts and air quality come from Open-Meteo,
         and US soil data from the USDA Natural Resources Conservation Service. The full list is on the{" "}
         <Link className={a} to="/knowledge">Data sources</Link> page.
       </p>

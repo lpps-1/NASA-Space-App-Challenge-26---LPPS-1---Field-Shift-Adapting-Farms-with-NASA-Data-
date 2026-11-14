@@ -113,10 +113,13 @@ export default function FarmMap({ className }) {
   const [target, setTarget] = useState(null);
   const home = profile?.country === "US" ? "US" : "PK";
   const start = useMemo(() => (hasPoint ? { center: [profile.lat, profile.lng], zoom: 7 } : { bounds: boundsOf(home) }), [hasPoint, profile?.lat, profile?.lng, home]);
+  // Background maps from NASA GIBS too (no key needed, unlike most map services):
+  // Blue Marble relief in light mode, Black Marble (Earth at night) in dark mode.
   const base =
     theme === "dark"
-      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+      ? "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png"
+      : "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg";
+  const labels = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels_15m/default/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png";
   const viewBtn = "inline-flex items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur hover:bg-card focus-ring";
 
   return (
@@ -162,10 +165,11 @@ export default function FarmMap({ className }) {
           className="h-full w-full bg-secondary"
           attributionControl
         >
-          <TileLayer key={base} url={base} attribution="&copy; OpenStreetMap contributors &copy; CARTO" subdomains="abcd" maxZoom={19} />
+          <TileLayer key={base} url={base} maxNativeZoom={8} maxZoom={19} attribution="NASA Blue Marble / Black Marble (GIBS)" />
           <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" />
           {/* Grey out every country the app doesn't cover yet. */}
-          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#0b1210" : "#6b7280", fillOpacity: 0.82 }} interactive={false} />
+          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1c2220" : "#9ca3a0", fillOpacity: 0.94 }} interactive={false} />
+          <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
           <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
           {hasPoint && (
             <CircleMarker center={[profile.lat, profile.lng]} radius={7} pathOptions={{ color: "#F2C94C", weight: 3, fillColor: "#123D2A", fillOpacity: 1 }}>

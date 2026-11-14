@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AtSign, ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { useT } from "@/i18n";
 import { cropLabel } from "@/lib/cropNames";
 import { estimateStage } from "@/lib/fieldStage";
@@ -13,17 +13,13 @@ import { deriveFarmFields } from "@/lib/farmSetup";
 import { usualSoil } from "@/lib/soil";
 import LocationPicker from "@/components/LocationPicker";
 import { useFields, useProfile, useUpdateProfile } from "@/hooks/useKisanData";
-import Avatar from "@/components/Avatar";
-import { useAuth } from "@/lib/AuthContext";
-import { FALLBACK_NAME, initialsOf } from "@/lib/profile";
 
-// Fields the farmer edits here. Identity (user_id, email) is owned by the account.
-const EDITABLE = ["display_name", "phone", "village", "preferred_language", "land_acres", "irrigation", "irrigation_methods", "soil_type", "crops",
+// Farm details the farmer edits here. Name, email and phone are account details: they live in Settings → Account.
+const EDITABLE = ["farm_name", "village", "preferred_language", "land_acres", "irrigation", "irrigation_methods", "soil_type", "crops",
   "current_crops", "previous_crops", "rotation", "rotation_note", "goals", "goal_note",
   "province", "province_id", "division", "division_id", "district", "district_id", "tehsil", "lat", "lng"];
 
 export default function Profile() {
-  const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: fields = [] } = useFields();
   const save = useUpdateProfile();
@@ -38,48 +34,32 @@ export default function Profile() {
     e.preventDefault();
     const derived = deriveFarmFields(form);
     const patch = Object.fromEntries(EDITABLE.filter((k) => k in derived).map((k) => [k, derived[k]]));
-    patch.display_name = String(form.display_name || "").trim().replace(/\s+/g, " ");
+    patch.farm_name = String(form.farm_name || "").trim().replace(/\s+/g, " ");
     patch.land_acres = Number(form.land_acres) || 0;
     const saved = await save.mutateAsync(patch);
     setForm(saved);
     toast.success(t("Farm profile saved"));
   };
-  const previewName = String(form.display_name || "").trim();
 
 
   return (
     <>
-      <PageHeader eyebrow={t("My farm")} title={t("Farmer profile")} description={t("Kisan AI uses these details to tailor advice to your land, crops and district.")} />
-      <section className="kisan-hero rise-in mb-6 flex flex-wrap items-center gap-4 p-5 sm:p-6" aria-label={t("Account")}>
-        <Avatar profile={{ display_name: previewName }} className="relative h-14 w-14 text-lg" />
-        <div className="relative min-w-0 flex-1">
-          <p className="truncate font-display text-2xl" dir="auto" data-testid="profile-name">{previewName || FALLBACK_NAME}</p>
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm text-white/70" data-testid="profile-email">
-            <AtSign className="h-3.5 w-3.5 text-harvest" aria-hidden="true" />
-            {user?.email || profile.email}
-          </p>
-        </div>
-        <dl className="relative grid grid-cols-2 gap-x-6 gap-y-1 text-[11px] text-white/60">
-          <dt>{t("Initials")}</dt>
-          <dd className="font-semibold text-white" data-testid="profile-initials">{initialsOf(previewName)}</dd>
-        </dl>
-      </section>
+      <PageHeader eyebrow={t("My farm")} title={t("Your farm")} description={t("Kisan AI uses these details to tailor advice to your land, crops and district. Your name, email and phone are in Settings.")} />
       <div className="grid gap-6 lg:grid-cols-5">
-        <form onSubmit={submit} className="kisan-card space-y-4 p-6 lg:col-span-3">
+        <form onSubmit={submit} className="kisan-card space-y-8 p-6 sm:p-8 lg:col-span-3">
+          <fieldset className="space-y-4">
+            <legend className="text-base font-semibold">{t("Farm and location")}</legend>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              label={t("Display name")}
-              value={form.display_name || ""}
-              onChange={set("display_name")}
-              placeholder={t("e.g. Muhammad Aslam")}
-              autoComplete="name"
+              label={t("Farm name")}
+              value={form.farm_name || ""}
+              onChange={set("farm_name")}
+              placeholder={t("e.g. Aslam Farm")}
               dir="auto"
               maxLength={60}
-              hint={t("Shown on your dashboard and used by Kisan AI.")}
-              data-testid="display-name-input"
+              className="sm:col-span-2"
+              data-testid="farm-name-input"
             />
-            <FormField label={t("Email (sign-in)")} value={user?.email || profile.email || ""} readOnly disabled hint={t("Your account identifier. Changing your name never changes it.")} />
-            <FormField label={t("Phone")} value={form.phone || ""} onChange={set("phone")} />
             <LocationPicker value={form} onChange={merge} className="sm:col-span-2" />
             <FormField label={t("Village / Chak")} value={form.village} onChange={set("village")} />
             <FormField label={t("Total land (acres)")} type="number" step="0.5" value={form.land_acres} onChange={set("land_acres")} />
@@ -90,10 +70,15 @@ export default function Profile() {
               </select>
             </FormField>
           </div>
-          <div className="space-y-2">
-            <span className="block text-sm font-medium">{t("Water sources")}</span>
+          </fieldset>
+          <fieldset className="space-y-2 border-t pt-6 [border-color:var(--card-line)]">
+            <legend className="sr-only">{t("Water sources")}</legend>
+            <span className="block text-base font-semibold">{t("Water sources")}</span>
             <IrrigationPicker value={form.irrigation_methods || []} onChange={(v) => merge({ irrigation_methods: v })} />
-          </div>
+          </fieldset>
+          <fieldset className="space-y-5 border-t pt-6 [border-color:var(--card-line)]">
+            <legend className="sr-only">{t("Crops")}</legend>
+            <span className="block text-base font-semibold">{t("Crops")}</span>
           <div className="space-y-2">
             <span className="block text-sm font-medium">{t("In your fields now")}</span>
             <CropChips label="Crops in the field now" max={MAX_CROP_PICKS} value={form.current_crops || []} onChange={(v) => merge({ current_crops: v })} />
@@ -102,8 +87,9 @@ export default function Profile() {
             <span className="block text-sm font-medium">{t("Last season")}</span>
             <CropChips label="Crops last season" max={MAX_CROP_PICKS} value={form.previous_crops || []} onChange={(v) => merge({ previous_crops: v })} />
           </div>
-          <div className="space-y-2">
-            <span className="block text-sm font-medium">{t("Goals this season (up to 3)")}</span>
+          </fieldset>
+          <div className="space-y-2 border-t pt-6 [border-color:var(--card-line)]">
+            <span className="block text-base font-semibold">{t("Goals this season (up to 3)")}</span>
             <GoalPicker value={form.goals || []} onChange={(v) => merge({ goals: v })} />
             <FormField label={t("Anything specific?")} value={form.goal_note || ""} onChange={set("goal_note")} dir="auto" maxLength={240} />
           </div>

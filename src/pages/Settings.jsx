@@ -2,7 +2,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { inputClass } from "@/components/FormField";
 import { kisan } from "@/api/kisanClient";
-import { useIsDemo, useProfile, useSettings, useUpdateSettings } from "@/hooks/useKisanData";
+import { useIsDemo, useProfile, useSettings, useUpdateProfile, useUpdateSettings } from "@/hooks/useKisanData";
 import { Link } from "react-router-dom";
 import { Languages, Palette, Ruler, UserRound, Volume2, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
@@ -131,13 +131,30 @@ function Section({ id, title, hint, children }) {
 
 function Row({ label, description, children }) {
   return (
-    <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <div className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
       <div className="min-w-0">
         <p className="text-sm font-medium">{label}</p>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        {description && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{description}</p>}
       </div>
-      {children}
+      <div className="flex shrink-0 justify-start sm:justify-end [&_a]:whitespace-nowrap [&_button]:whitespace-nowrap">{children}</div>
     </div>
+  );
+}
+
+/** A text field that saves when you leave it (Enter also saves). */
+function AccountInput({ value, onSave, label, ...rest }) {
+  const [v, setV] = useState(value || "");
+  useEffect(() => setV(value || ""), [value]);
+  return (
+    <input
+      className={cn(inputClass, "w-full sm:w-64")}
+      value={v}
+      aria-label={label}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => v.trim() !== String(value || "") && onSave(v.trim().replace(/\s+/g, " "))}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      {...rest}
+    />
   );
 }
 
@@ -175,6 +192,7 @@ export default function SettingsDialog() {
   const { data: s } = useSettings();
   const { data: profile } = useProfile();
   const update = useUpdateSettings();
+  const saveProfile = useUpdateProfile();
   const { theme, setTheme } = useTheme();
   const { zoom, setZoom } = usePageZoom();
   const { user, logout } = useAuth();
@@ -193,7 +211,6 @@ export default function SettingsDialog() {
     const esc = (e) => e.key === "Escape" && close();
     document.addEventListener("keydown", esc);
     return () => document.removeEventListener("keydown", esc);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   if (!open) return null;
   const set = (k) => (v) => update.mutate({ [k]: v });
@@ -245,13 +262,13 @@ export default function SettingsDialog() {
           <Segmented label={t("Temperature")} value={s.temp_unit === "f" ? "f" : "c"} onChange={set("temp_unit")} options={[{ value: "c", label: "°C" }, { value: "f", label: "°F" }]} />
         </Row>
         <Row label={t("Country")} description={t("Sets the crops, seasons, soil survey and schemes the app uses.")}>
-          <Link to="/profile" onClick={closeSettings} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{profile?.country === "US" ? t("United States") : t("Pakistan")} · {t("Change")}</Link>
+          <Link to="/profile" onClick={closeSettings} className="inline-flex items-center rounded-xl border px-4 py-2 text-sm hover:bg-secondary focus-ring [border-color:var(--card-line)]">{profile?.country === "US" ? t("United States") : t("Pakistan")} · {t("Change")}</Link>
         </Row>
         <Row label={t("Your fertilizer prices")} description={ownPrices ? t("{n} of your own prices are saved and used in the calculators.", { n: ownPrices }) : t("The calculators use average dealer prices until you enter your own in Tools.")}>
           {ownPrices > 0 ? (
-            <button onClick={() => { set("input_prices")({}); toast.success(t("Back to average prices")); }} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Use average prices")}</button>
+            <button onClick={() => { set("input_prices")({}); toast.success(t("Back to average prices")); }} className="inline-flex items-center rounded-xl border px-4 py-2 text-sm hover:bg-secondary focus-ring [border-color:var(--card-line)]">{t("Use average prices")}</button>
           ) : (
-            <Link to="/tools" onClick={closeSettings} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Open Tools")}</Link>
+            <Link to="/tools" onClick={closeSettings} className="inline-flex items-center rounded-xl border px-4 py-2 text-sm hover:bg-secondary focus-ring [border-color:var(--card-line)]">{t("Open Tools")}</Link>
           )}
         </Row>
         <Toggle label={t("Rain and weather predictions")} description={t("Chance of rain, frost and heat for your district on the dashboard.")} checked={s.weather_alerts} onChange={set("weather_alerts")} />
@@ -267,8 +284,17 @@ export default function SettingsDialog() {
       </Section>
   ) : (
       <Section id="account" icon={UserRound} title={t("Account and data")} hint={user?.email}>
-        <Row label={t("Where your data lives")} description={t("Your farm, fields, jobs and chats are saved in this browser, not on a server.")}>
-          <Link to="/privacy" onClick={closeSettings} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Privacy Policy")}</Link>
+        <Row label={t("Display name")} description={t("Shown on your dashboard and used by Kisan AI.")}>
+                <AccountInput label={t("Display name")} value={profile?.display_name} maxLength={60} dir="auto" data-testid="settings-name" onSave={(v) => v && saveProfile.mutate({ display_name: v }, { onSuccess: () => toast.success(t("Saved")) })} />
+              </Row>
+              <Row label={t("Email (sign-in)")} description={t("Your account identifier. Changing your name never changes it.")}>
+                <p className="w-full truncate rounded-xl bg-secondary/60 px-3 py-2 text-sm text-muted-foreground sm:w-64" dir="ltr">{user?.email || profile?.email}</p>
+              </Row>
+              <Row label={t("Phone")} description={t("Optional. Only kept in this browser.")}>
+                <AccountInput label={t("Phone")} value={profile?.phone} inputMode="tel" maxLength={20} dir="ltr" onSave={(v) => saveProfile.mutate({ phone: v }, { onSuccess: () => toast.success(t("Saved")) })} />
+              </Row>
+              <Row label={t("Where your data lives")} description={t("Your farm, fields, jobs and chats are saved in this browser, not on a server.")}>
+          <Link to="/privacy" onClick={closeSettings} className="inline-flex items-center rounded-xl border px-4 py-2 text-sm hover:bg-secondary focus-ring [border-color:var(--card-line)]">{t("Privacy Policy")}</Link>
         </Row>
         <Row
           label={demo ? t("Reset demo data") : t("Clear my data")}

@@ -8,7 +8,6 @@ import Recommendations from "@/components/dashboard/Recommendations";
 import RecentConversations from "@/components/dashboard/RecentConversations";
 import FarmPlan from "@/components/dashboard/FarmPlan";
 import RotationSummary from "@/components/dashboard/RotationSummary";
-import SeasonClock from "@/components/dashboard/SeasonClock";
 import { recommendations } from "@/lib/advice";
 import { useConversations, useFields, useIsDemo, useNasa, useProfile, useTasks, useWeather } from "@/hooks/useKisanData";
 import { useT } from "@/i18n";
@@ -35,20 +34,17 @@ export default function Dashboard() {
         </p>
       )}
       <RotationSummary />
+      {/* Weather beside rain chances and jobs, then the fields across the full width, so no column is left empty. */}
       <div className="grid gap-5 lg:grid-cols-5">
-        <div className="space-y-5 lg:col-span-3">
+        <div className="lg:col-span-3">
           <WeatherCard weather={weather} />
-          <FieldsOverview fields={fields} demo={demo} />
         </div>
         <div className="space-y-5 lg:col-span-2">
           <RainOutlook weather={weather} />
           <TodayTasks tasks={tasks} demo={demo} />
-          {/* Fills the column beside the field cards and stays in view while scrolling. */}
-          <div className="lg:sticky lg:top-6">
-            <SeasonClock profile={profile} />
-          </div>
         </div>
       </div>
+      <FieldsOverview fields={fields} demo={demo} />
       <div className="grid gap-5 lg:grid-cols-2">
         <FarmPlan profile={profile} />
         <NasaData nasa={nasa} />

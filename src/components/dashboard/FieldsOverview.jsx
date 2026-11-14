@@ -104,7 +104,7 @@ function FieldCard({ f, demo, onReport }) {
   // Six rows on a shared grid (subgrid), so each row starts at the same height in every card:
   // name · sowing date · season progress · typical harvest · warnings · report button.
   return (
-    <li className="row-span-6 grid grid-rows-subgrid gap-3 rounded-2xl border bg-background/40 p-4 [border-color:var(--card-line)]">
+    <li className="row-span-6 grid min-w-0 grid-cols-1 grid-rows-subgrid gap-3 rounded-2xl border bg-background/40 p-4 [border-color:var(--card-line)]">
       <Link to={`/fields/${f.id}`} className="group flex items-center gap-2.5 focus-ring">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-xl" aria-hidden="true">{CROP_EMOJI[f.crop] || "🌱"}</span>
         <span className="min-w-0 flex-1">

@@ -244,6 +244,7 @@ function describeProfile(profile, fields) {
     if (loc) lines.push(`Location: ${loc}`);
     if (Number.isFinite(p.lat) && Number.isFinite(p.lng))
       lines.push(`District coordinates: ${Number(p.lat).toFixed(3)}, ${Number(p.lng).toFixed(3)} (pass the district name to get_weather)`);
+    if (p.farm_name) lines.push(`Farm name: ${String(p.farm_name).slice(0, 60)}`);
     if (p.land_acres) lines.push(`Land: ${p.land_acres} acres`);
     if (p.soil_type) lines.push(`Soil (farmer-reported): ${p.soil_type}`);
     if (p.irrigation) lines.push(`Irrigation: ${p.irrigation}`);

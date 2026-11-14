@@ -35,7 +35,16 @@ This file is how they tell each other what was done last and what is left.
 
 **Branch rule (from Majid):** `majid` is the master branch, `abdullah` is the slave. Majid's Claude merges Abdullah's new commits into `majid` (majid wins any conflict), then pushes `majid` and `main`. **Abdullah's Claude: please `git pull origin main` before starting work.** Your branch is behind main, so a deploy from `abdullah` looks like Majid's chat changes were reverted.
 
-**Last task done:** fourth round (14 Nov ~16:15):
+**Last task done:** fifth round (14 Nov ~20:00):
+- **Season clock removed** (`SeasonClock.jsx` and its CSS deleted). Dashboard order is now: hero → rotation summary → weather (3/5) beside rain chances + jobs (2/5) → **Crops & fields full width** → farm plan + NASA data → recommendations → recent chats. No empty corner.
+- **Field cards overflowed** at wide screens (text ran into the next card): each card is now `grid-cols-1 min-w-0` inside the subgrid, so long text truncates/wraps inside its own card.
+- **Map** (`FarmMap.jsx`): CARTO tiles showed "API KEY REQUIRED" on the live site, so the background is now NASA GIBS (Blue Marble relief in light mode, VIIRS Black Marble in dark mode) plus NASA place labels. Countries outside Pakistan/US are a near-solid grey (opacity 0.94), so data layers only show inside the two covered countries. Privacy/Terms no longer mention CARTO.
+- **My farm** (`Profile.jsx`) asks only farm details: new **Farm name** (`farm_name`, also sent to the AI), location, village, land, soil, water, crops, goals, and the fields list. Name, email and phone moved to **Settings → Account and data** (name and phone save when you leave the box; email is read-only).
+- **Settings rows**: label left, controls in one right-hand column; buttons never wrap ("Privacy Policy" was breaking onto two lines).
+- **Tools**: tool list is a quiet menu (no big cards), more space around the panel; page titles across the app are smaller (24–28 px, weight 700) via `PageHeader.jsx`.
+- Chat on production works (checked in the browser with the demo farm); answers can take 30–40 s.
+
+**Before that:** fourth round (14 Nov ~16:15):
 - **Start page is the dashboard.** The chat moved from `/` to **`/chat`**; `/` redirects to `/dashboard`. Every chat link now uses `/chat?q=…`, `/chat?c=…`, `/chat?new=…`, `/chat?voice=1`. Use these from now on.
 - **Field cards** (`FieldsOverview.jsx`): each card is a CSS subgrid of 6 rows (name · sown date · season progress · typical harvest · warnings · button), so every row starts at the same height in all cards. A "Warnings" heading is always shown ("No problems reported" when empty). "Report a problem" is a real full-width button.
 - **Season clock** (new `src/components/dashboard/SeasonClock.jsx`), in the dashboard's right column under the jobs, sticky while scrolling: crop-year dial with winter/summer arcs that draw in, a hand that sweeps to today, and an orbiting satellite. CSS: `.season-orbit`, `.season-arc` in `index.css`.
