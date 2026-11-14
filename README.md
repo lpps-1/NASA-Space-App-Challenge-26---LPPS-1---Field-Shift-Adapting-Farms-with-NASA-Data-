@@ -2,11 +2,11 @@
 
 > **NASA Space Apps Challenge 2026 · Team LPPS-1 (Lahore) · Field Shift: Adapting Farms with NASA Data**
 >
-> **Note on how this code was uploaded:** we built this prototype before the event and worked offline, because our internet connection is very poor. Uploading everything at once kept failing, so we pushed the history to GitHub in several smaller pushes. The commits labelled "Prototype part N/11 (pre-event)" are the prototype split into 11 parts in build order. Their dates show when the history was put together, not when each part was written. Work done during the hackathon is added after them as normal commits.
+> **Note on how this code was uploaded:** all of this work was done during the hackathon (14–15 Nov 2026). We worked offline because our internet connection was very poor, so we could not push to GitHub as we went, and uploading everything at once kept failing. We pushed it later in smaller parts instead: the commits titled "Part 1/11" to "Part 11/11" are that offline work, split into 11 parts in build order. Their dates show when each part was pushed, not when it was written. Work added after them is a normal commit history.
 
 A farming companion for Pakistani farmers. It has a dashboard with weather, fields and upcoming work. It also has a voice-enabled, agriculture-only AI assistant that answers farming questions in Urdu, Punjabi or English (and politely declines anything unrelated to farming), a farm calendar, farm calculators, a farmer profile, and an admin knowledge base.
 
-The app was originally built on Base44. It now runs fully independently, with no Base44 account, SDK, API key or hosted service involved.
+Base44 is not a separate or earlier project. It is the same project: the app was started on Base44 during the hackathon, worked on offline, and pushed to GitHub later. It now runs fully independently, with no Base44 account, SDK, API key or hosted service involved.
 
 ## Tech
 

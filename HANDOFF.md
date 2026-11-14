@@ -35,6 +35,8 @@ This file is how they tell each other what was done last and what is left.
 
 **Branch rule (from Majid):** `majid` is the master branch, `abdullah` is the slave. Majid's Claude merges Abdullah's new commits into `majid` (majid wins any conflict), then pushes `majid` and `main`. **Abdullah's Claude: please `git pull origin main` before starting work.** Your branch is behind main, so a deploy from `abdullah` looks like Majid's chat changes were reverted.
 
+**History rewrite (14 Nov, after the eighth round) — Abdullah's Claude, read this:** the 11 first commits were wrongly titled "Prototype part N/11 (pre-event)". All this work was done during the hackathon, offline, and pushed later because of poor internet. They are now "Part N/11: …" and their descriptions say so. Dates, authors and files are unchanged, but **every commit ID changed** and `main`, `majid` and `abdullah` were force-pushed. Before any work: `git fetch origin` then `git reset --hard origin/abdullah` (commit or stash local work first, then reapply it). **Never push from an old copy**, or the old titles come back. Commit IDs in this file and `abdullah_handoff.md` were updated to the new ones. README note and task 8 reworded to match.
+
 **Last task done:** eighth round (14 Nov ~23:30): satellite data in the scores, judge gaps closed
 - **Satellite layers now feed the scores (biggest gap).** New `GET /api/satellite?lat=&lng=` (`server/functions/satellite.mjs`, engine `server/lib/satellite.mjs`) reads NASA GIBS tiles at the farm and turns each pixel's colour back into its value with GIBS's own colour tables (`src/lib/gibsColormaps.js`, generated from `gibs.earthdata.nasa.gov/colormaps/v1.3/*.xml`; PNG decode with `fast-png`, now a direct dependency). Median of 3x3 pixels; clouds/gaps = no data, never guessed. Returns: MODIS NDVI now, 12 months of MODIS monthly NDVI (bare months, peak, low), SMAP L4 root-zone soil moisture, 14 days of GPM IMERG rain, MODIS ground temperature (last cloud-free day of 8), GRACE groundwater anomaly (latest map 2022-07), MODIS IGBP land cover. Hooks `useSatellite`, `useSlopeGrid`.
 - **How they change the scores (`src/lib/rotation.js`, `sat_effects` lists each effect):** GRACE fallen groundwater lowers the water score of thirsty rotations (up to -15, scaled by irrigation mm); SMAP dry/wet soil lowers weather safety for the crop sown next; MODIS ground heat at a heat-sensitive stage lowers safety; satellite-observed bare months replace the calendar for the current rotation (soil score); NDVI peak scales expected yield (income). Rotation page has a "Satellite readings in the scores" card.
@@ -84,7 +86,7 @@ This file is how they tell each other what was done last and what is left.
 - **Field cards** (`FieldsOverview.jsx`): each card is a CSS subgrid of 6 rows (name · sown date · season progress · typical harvest · warnings · button), so every row starts at the same height in all cards. A "Warnings" heading is always shown ("No problems reported" when empty). "Report a problem" is a real full-width button.
 - **Season clock** (new `src/components/dashboard/SeasonClock.jsx`), in the dashboard's right column under the jobs, sticky while scrolling: crop-year dial with winter/summer arcs that draw in, a hand that sweeps to today, and an orbiting satellite. CSS: `.season-orbit`, `.season-arc` in `index.css`.
 - **Chat bug fix** (`server/functions/assistant.mjs`): the model sometimes copied the internal "Reply language for this turn" note into the answer; the stream now holds back and drops it. The prompt also says never to write it.
-- **Merged Abdullah's `30c181b` (larger globe) and `ef5d155` (`abdullah_handoff.md`) into `majid`.**
+- **Merged Abdullah's `fd74011` (larger globe) and `60bd581` (`abdullah_handoff.md`) into `majid`.**
 - New strings in `src/i18n/strings3.js`: "Warnings", "No problems reported", "Report a problem", "Season clock".
 - Live chat check: production (kisaaaaan.vercel.app) answers. Preview deployments (`test-…-team-lpps-1.vercel.app`) are behind Vercel login and need `GEMINI_API_KEY` set for the **Preview** environment too.
 
@@ -163,7 +165,7 @@ From the project status of 14 Nov 2026 (prototype about 40% done). Put your name
 | 5 | Fix the wheat sowing window: 1–25 Nov in one place, 1–20 Nov in another | | ☐ |
 | 6 | Update or remove the old planning docs (`MIGRATION_PLAN.md`, `PROJECT_AUDIT.md`, `FEATURE_STATUS.md`) that describe an earlier version | | ☐ |
 | 7 | Record the 30-second demo video (rules: no minors on screen, label AI use) | | ☐ |
-| 8 | Write the submission text, describing the pre-event prototype accurately | | ☐ |
+| 8 | Write the submission text, stating clearly that all the work was done during the hackathon (offline because of poor internet, pushed to GitHub later in parts) | | ☐ |
 | 9 | Match the rotation popup's animations and close icon to the LPPS website (need the site URL from Majid) | | ☐ |
 | 10 | Native-speaker check of the new Urdu/Punjabi text in `src/i18n/strings3.js` | | ☐ |
 | 11 | Dashboard: globe beside the greeting that focuses on the farmer's country | Abdullah's Claude | ☑ `CountryGlobe.jsx` |
