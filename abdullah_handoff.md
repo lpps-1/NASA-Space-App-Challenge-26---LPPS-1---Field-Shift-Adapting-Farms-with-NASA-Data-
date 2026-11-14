@@ -10,6 +10,18 @@ Commit hashes below are from the `abdullah` branch.
 
 ## 14 Nov 2026
 
+### Google sign-in that works on Vercel (this commit)
+- Before: the Google button needed Netlify Identity, which does not exist on Vercel (`/.netlify/identity/settings` on kisaaaaan.vercel.app just returns the home page), so the button was hidden.
+- `src/lib/googleSignIn.js` (new): Google Identity Services popup (`accounts.google.com/gsi/client`, scopes `openid email profile`) gives a short-lived token; `verifyGoogle` sends it to the server. Closing the popup is not an error.
+- `server/functions/auth-google.mjs` (new) + `api/auth-google.js` (Vercel entry): `POST /api/auth-google {access_token}` checks the token with Google (tokeninfo: issued to our client, not expired; userinfo: verified email) and returns `{ id: "g_<google id>", email, name, picture }`. The token is not stored.
+- `src/lib/AuthContext.jsx`: new account type `provider: "google"` (`openGoogle`), id kept from Google so the same Google account always opens the same farm; new Google accounts go through farm setup and start with their Google name. `loginWithGoogle` uses the popup when `VITE_GOOGLE_CLIENT_ID` is set, otherwise the old Netlify Identity path.
+- `src/components/GoogleButton.jsx`: always shown on Sign in ("Continue with Google") and Sign up ("Sign up with Google"); preloads Google's script when the page opens so the popup is not blocked; goes to `/` after sign-in. Without a client ID a tap shows "Google sign-in isn't set up on this site yet".
+- `.env.example`: `VITE_GOOGLE_CLIENT_ID` replaces `VITE_ENABLE_GOOGLE_SIGNIN`.
+- **To turn it on (Zaid / whoever owns Vercel and Google Cloud):** create an OAuth client (type "Web application") in Google Cloud Console; add `https://kisaaaaan.vercel.app` and `http://localhost:5173` (plus any custom domain) to "Authorized JavaScript origins" (no redirect URI needed for the popup); set `VITE_GOOGLE_CLIENT_ID` in Vercel (Production and Preview) and redeploy. Set the OAuth consent screen app name to "Kisan AI".
+- Tested: lint, `npm test`, build; `/api/auth-google` answers 503 without a client ID, 405 for GET, 400 without a token and 401 for a fake token (checked against Google); both buttons show; Google's script loads when a client ID is set. Not tested: a real Google sign-in (needs the real client ID).
+- Accounts are still stored in each browser (no server database), same as email accounts; a Google sign-in on a new phone starts a fresh farm there.
+- New English-only strings: "Google sign-in didn't work", "Google sign-in isn't set up on this site yet. Use email and password, or explore the demo farm.", "Your browser blocked the Google window. Allow pop-ups for this site and try again.", "Google sign-in didn't finish. Please try again."
+
 ### Dashboard hero: larger globe and even spacing: `30c181b`
 - `src/components/dashboard/CountryGlobe.jsx`: the canvas is now rectangular (290x200 px on desktop, 232x160 on `sm`, 150x112 on phones) so the wide satellite orbit fits. The globe itself is about 170 px across on desktop. The flag pole on the marker is scaled up to match.
 - `src/components/dashboard/DashboardHeader.jsx`: the hero is one flex row. The left column holds the date chips, the greeting block and the buttons, spaced evenly with `justify-between` (measured 45 px between each). The globe is centred on the full height. On phones the globe stacks under the buttons.

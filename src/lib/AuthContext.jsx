@@ -14,11 +14,14 @@ import {
 import { DEMO_USER } from '@/data/fixtures';
 import { kisan } from '@/api/kisanClient';
 import { queryClientInstance } from '@/lib/query-client';
+import { GOOGLE_CLIENT_ID, googleAccessToken, verifyGoogle } from '@/lib/googleSignIn';
 
 /**
  * Auth provider.
  *
- * Real accounts use Netlify Identity (`@netlify/identity`): email + password,
+ * Google sign-in uses Google Identity Services and /api/auth-google (works on Vercel;
+ * see src/lib/googleSignIn.js) when VITE_GOOGLE_CLIENT_ID is set. Real email accounts
+ * use Netlify Identity (`@netlify/identity`) where the site runs on Netlify: email + password,
  * Google sign-in, email confirmation and password recovery. When Identity
  * isn't reachable (plain `vite`, or Identity not enabled on the site) the app
  * falls back to local accounts stored in this browser, and "Explore the demo
@@ -30,7 +33,7 @@ import { queryClientInstance } from '@/lib/query-client';
  * requestPasswordReset, setNewPassword, identity and authNotice.
  *
  * The session only holds account identity: { id, email, role, onboarded, provider }.
- * `provider` is "identity" for Netlify Identity accounts and "local" otherwise.
+ * `provider` is "google" for Google accounts, "identity" for Netlify Identity accounts and "local" otherwise.
  * The farmer's name lives in their profile (display_name), never derived from the email.
  */
 const SESSION_KEY = 'kisan-session';
@@ -80,7 +83,7 @@ function readSession() {
   if (!s) return null;
   const provider = s.provider || 'local';
   const email = s.email || DEMO_USER.email;
-  const id = provider === 'identity' ? s.id : s.id && s.id !== DEMO_USER.id ? s.id : accountId(email);
+  const id = provider === 'identity' || provider === 'google' ? s.id : s.id && s.id !== DEMO_USER.id ? s.id : accountId(email);
   const known = accounts()[id];
   const session = {
     id,
@@ -165,6 +168,24 @@ export const AuthProvider = ({ children }) => {
     };
     // A brand-new profile starts with the name from Google (or the sign-up form).
     kisan.setActiveUser({ id: next.id, email: next.email, display_name: u.name || '' });
+    queryClientInstance.clear();
+    persist(next);
+    return next;
+  }, [persist]);
+
+  /** Opens the account of a Google user confirmed by /api/auth-google. */
+  const openGoogle = useCallback((g) => {
+    const known = accounts()[g.id];
+    const next = {
+      id: g.id,
+      email: g.email || known?.email || '',
+      role: known?.role || 'farmer',
+      // A Google account this device has never seen goes through farm setup first.
+      onboarded: known ? known.onboarded : false,
+      provider: 'google',
+    };
+    // A brand-new profile starts with the name from Google.
+    kisan.setActiveUser({ id: next.id, email: next.email, display_name: g.name || '' });
     queryClientInstance.clear();
     persist(next);
     return next;
@@ -270,17 +291,25 @@ export const AuthProvider = ({ children }) => {
     return next;
   }, [ensureSettings, openIdentity, openLocal]);
 
-  /** Sends the farmer to Google. The page navigates away and comes back signed in. */
+  /**
+   * Google sign-in. On Vercel (VITE_GOOGLE_CLIENT_ID set) it opens Google's popup, confirms the
+   * account on the server and returns the session. On Netlify with Identity it navigates to Google
+   * and comes back signed in.
+   */
   const loginWithGoogle = useCallback(async () => {
+    if (GOOGLE_CLIENT_ID) {
+      const token = await googleAccessToken();
+      return openGoogle(await verifyGoogle(token));
+    }
     const settings = await ensureSettings();
     if (settings.status !== 'on') {
-      throw new Error('Google sign-in is not available yet. Use email and password, or explore the demo farm.');
+      throw new Error("Google sign-in isn't set up on this site yet. Use email and password, or explore the demo farm.");
     }
     if (!settings.providers?.google) {
       throw new Error('Google sign-in is not turned on yet. Use email and password, or explore the demo farm.');
     }
     oauthLogin('google');
-  }, [ensureSettings]);
+  }, [ensureSettings, openGoogle]);
 
   const requestPasswordReset = useCallback(async (email) => {
     const settings = await ensureSettings();

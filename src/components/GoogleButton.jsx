@@ -1,26 +1,37 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/AuthContext";
 import { useT } from "@/i18n";
+import { GoogleCancelled, preloadGoogle } from "@/lib/googleSignIn";
 
 /**
- * Google sign-in needs Netlify Identity, which isn't available on the Vercel deploy.
- * It stays hidden unless VITE_ENABLE_GOOGLE_SIGNIN=true is set at build time.
+ * Always shown on the sign-in and sign-up pages. It works once VITE_GOOGLE_CLIENT_ID is set
+ * (see src/lib/googleSignIn.js); until then a tap explains that Google sign-in isn't set up.
  */
-export const GOOGLE_SIGNIN_ENABLED = import.meta.env.VITE_ENABLE_GOOGLE_SIGNIN === "true";
+export const GOOGLE_SIGNIN_ENABLED = true;
 
-/** "Continue with Google" (Netlify Identity → Google). Follows Google's button guidelines: white surface, the G mark, plain label. */
+/** "Continue with Google". Follows Google's button guidelines: white surface, the G mark, plain label. */
 export default function GoogleButton({ label }) {
   const { t } = useT();
   const { loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+
+  // Load Google's script as soon as the page opens, so the popup opens straight from the tap.
+  useEffect(() => {
+    preloadGoogle().catch(() => {});
+  }, []);
 
   const go = async () => {
     setBusy(true);
     try {
-      await loginWithGoogle(); // navigates away on success
+      const session = await loginWithGoogle();
+      // Popup sign-in returns the session; farm setup (FarmSetupGate) takes new farmers from "/".
+      if (session) navigate("/");
     } catch (err) {
-      toast.error(t("Google sign-in isn't available"), { description: err.message });
+      if (!(err instanceof GoogleCancelled)) toast.error(t("Google sign-in didn't work"), { description: t(err.message) });
+    } finally {
       setBusy(false);
     }
   };
