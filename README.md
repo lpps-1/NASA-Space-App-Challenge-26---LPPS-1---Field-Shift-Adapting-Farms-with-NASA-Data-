@@ -1,8 +1,6 @@
 # Pakistan Kisan AI
 
 > **NASA Space Apps Challenge 2026 · Team LPPS-1 (Lahore) · Field Shift: Adapting Farms with NASA Data**
->
-> **Note on how this code was uploaded:** all of this work was done during the hackathon (14–15 Nov 2026). We worked offline because our internet connection was very poor, so we could not push to GitHub as we went, and uploading everything at once kept failing. We pushed it later in smaller parts instead: the commits titled "Part 1/11" to "Part 11/11" are that offline work, split into 11 parts in build order. Their dates show when each part was pushed, not when it was written. Work added after them is a normal commit history.
 
 A farming companion for Pakistani farmers. It has a dashboard with weather, fields and upcoming work. It also has a voice-enabled, agriculture-only AI assistant that answers farming questions in Urdu, Punjabi or English (and politely declines anything unrelated to farming), a farm calendar, farm calculators, a farmer profile, and an admin knowledge base.
 
@@ -73,16 +71,17 @@ How it works:
 - **A shared "Tasks left" list** shows what still needs doing. A Claude puts its name next to a task before starting it, so both can work on different tasks at once without doing the same one twice.
 - **Read it first.** At the start of every session, each Claude runs `git fetch origin`, reads the other branch's copy (`git show origin/majid:HANDOFF.md` or `git show origin/abdullah:HANDOFF.md`), and updates its own section after every finished task.
 
-## A note on the bulk upload and the Claude notes
-
-Because our work was pushed to GitHub in bulk (see the note at the top), the Claude assistants sometimes took that code for earlier, already-existing work when they first read the repository, and a few early notes in `HANDOFF.md` and the project docs describe it that way ("received", "existing", "from the export"). That reading is wrong. All of it was built by our team during the hackathon and only uploaded together later, because the internet connection was too poor to push as we went.
-
 ## Project docs
 
 - `HANDOFF.md`: notes between Majid's Claude and Abdullah's Claude (last task done, tasks left)
 - `PLAN.md`: roadmap of what's next (data model, real accounts, live AI, photo diagnosis, weather alerts)
-- `PROJECT_AUDIT.md`: what was received from the Base44 export and what changed
+- `PROJECT_AUDIT.md`: what the app had when we moved it off Base44 during the hackathon, and what we changed
 - `ARCHITECTURE.md`: how the app is structured
 - `MIGRATION_PLAN.md`: what replaces each Base44 piece
 - `FEATURE_STATUS.md`: feature-by-feature status
-1
+
+## How this code was uploaded
+
+All of this work was done by our team on the spot, during the hackathon (14–15 Nov 2026). Nothing was exported or brought in from an earlier project. We worked offline because our internet connection was very poor, so we could not push to GitHub as we went, and uploading everything at once kept failing. We pushed it later in smaller parts instead: the commits titled "Part 1/11" to "Part 11/11" are that offline work, split into 11 parts in build order. Their dates show when each part was pushed, not when it was written. Work added after them is a normal commit history.
+
+Because the work arrived on GitHub in bulk, the Claude assistants sometimes took it for earlier, already-existing code when they first read the repository, and a few early notes in `HANDOFF.md` and the project docs describe it that way (as "received" or "existing" code). That reading is wrong: it was all written during the hackathon and only uploaded together later.
