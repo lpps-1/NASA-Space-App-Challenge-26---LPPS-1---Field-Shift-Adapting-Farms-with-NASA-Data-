@@ -111,35 +111,37 @@ export default function CountryGlobe({ profile, className = "" }) {
     const reduced = window.matchMedia?.(REDUCED).matches;
     const projection = geoOrthographic().clipAngle(90);
     const path = geoPath(projection, ctx);
-    let size = 0;
+    let width = 0;
+    let height = 0;
     let frame = 0;
     let started = 0;
 
     const draw = (rotation, now) => {
-      const r = size * 0.335;
-      const c = size / 2;
-      projection.translate([c, c]).scale(r).rotate(rotation);
-      ctx.clearRect(0, 0, size, size);
+      const r = height * 0.43;
+      const cx = width / 2;
+      const cy = height / 2;
+      projection.translate([cx, cy]).scale(r).rotate(rotation);
+      ctx.clearRect(0, 0, width, height);
 
       // Satellite orbit. Its far half and the satellite (when behind) are drawn first, so the globe covers them.
-      const rx = size * 0.46;
-      const ry = size * 0.15;
+      const rx = width * 0.47;
+      const ry = height * 0.15;
       const theta = reduced ? 0.8 : ((now || 0) / 1000 / ORBIT_SECONDS) * Math.PI * 2 + 0.8;
       const front = Math.sin(theta) > 0;
-      const sx = c + rx * Math.cos(theta) * Math.cos(TILT) - ry * Math.sin(theta) * Math.sin(TILT);
-      const sy = c + rx * Math.cos(theta) * Math.sin(TILT) + ry * Math.sin(theta) * Math.cos(TILT);
+      const sx = cx + rx * Math.cos(theta) * Math.cos(TILT) - ry * Math.sin(theta) * Math.sin(TILT);
+      const sy = cy + rx * Math.cos(theta) * Math.sin(TILT) + ry * Math.sin(theta) * Math.cos(TILT);
       const orbit = (from, to, alpha) => {
         ctx.beginPath();
-        ctx.ellipse(c, c, rx, ry, TILT, from, to);
+        ctx.ellipse(cx, cy, rx, ry, TILT, from, to);
         ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
         ctx.lineWidth = 1;
         ctx.stroke();
       };
       orbit(Math.PI, Math.PI * 2, 0.14);
-      if (!front) drawSatellite(ctx, sx, sy, size * 0.027);
+      if (!front) drawSatellite(ctx, sx, sy, height * 0.027);
 
       // Ocean: deep green-black so the globe sits inside the hero.
-      const ocean = ctx.createRadialGradient(c * 0.85, c * 0.8, r * 0.1, c, c, r);
+      const ocean = ctx.createRadialGradient(cx - r * 0.15, cy - r * 0.2, r * 0.1, cx, cy, r);
       ocean.addColorStop(0, "#143326");
       ocean.addColorStop(1, "#06140d");
       ctx.beginPath();
@@ -165,7 +167,7 @@ export default function CountryGlobe({ profile, className = "" }) {
       // The farmer's country: lit and outlined.
       ctx.save();
       ctx.shadowColor = "rgba(242,201,76,0.85)";
-      ctx.shadowBlur = size * 0.07;
+      ctx.shadowBlur = height * 0.07;
       ctx.beginPath();
       path(target.shape);
       ctx.fillStyle = "#F2C94C";
@@ -178,7 +180,7 @@ export default function CountryGlobe({ profile, className = "" }) {
       ctx.stroke();
 
       // Dark sides: the globe fades to black toward the edge, keeping the centre in focus.
-      const sides = ctx.createRadialGradient(c, c, r * 0.35, c, c, r);
+      const sides = ctx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
       sides.addColorStop(0, "rgba(0,0,0,0)");
       sides.addColorStop(0.7, "rgba(0,0,0,0.38)");
       sides.addColorStop(1, "rgba(0,0,0,0.88)");
@@ -195,7 +197,7 @@ export default function CountryGlobe({ profile, className = "" }) {
       ctx.stroke();
 
       orbit(0, Math.PI, 0.32);
-      if (front) drawSatellite(ctx, sx, sy, size * 0.027);
+      if (front) drawSatellite(ctx, sx, sy, height * 0.027);
 
       // Location marker: a dot with two ripples, and the flag pole on top of it.
       const xy = target.farm ? projection(target.farm) : null;
@@ -206,14 +208,14 @@ export default function CountryGlobe({ profile, className = "" }) {
           for (const offset of [0, 0.5]) {
             const phase = (((now || 0) / 2200 + offset) % 1);
             ctx.beginPath();
-            ctx.arc(x, y, size * (0.015 + phase * 0.07), 0, Math.PI * 2);
+            ctx.arc(x, y, height * (0.015 + phase * 0.07), 0, Math.PI * 2);
             ctx.strokeStyle = `rgba(242,201,76,${0.8 * (1 - phase)})`;
             ctx.lineWidth = 1.4;
             ctx.stroke();
           }
         }
         ctx.beginPath();
-        ctx.arc(x, y, size * 0.017, 0, Math.PI * 2);
+        ctx.arc(x, y, height * 0.017, 0, Math.PI * 2);
         ctx.fillStyle = "#ffffff";
         ctx.fill();
         ctx.strokeStyle = "#123D2A";
@@ -242,13 +244,14 @@ export default function CountryGlobe({ profile, className = "" }) {
 
     const resize = () => {
       const box = wrap.getBoundingClientRect();
-      size = Math.round(Math.min(box.width, box.height));
-      if (!size) return;
+      width = Math.round(box.width);
+      height = Math.round(box.height);
+      if (!width || !height) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = size * dpr;
-      canvas.height = size * dpr;
-      canvas.style.width = `${size}px`;
-      canvas.style.height = `${size}px`;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (reduced) draw(resting, 0);
     };
@@ -265,12 +268,12 @@ export default function CountryGlobe({ profile, className = "" }) {
 
   return (
     <figure className={`flex shrink-0 flex-col items-center gap-2 ${className}`} data-testid="country-globe">
-      <div ref={wrapRef} className="relative h-[124px] w-[124px] sm:h-[148px] sm:w-[148px] lg:h-[168px] lg:w-[168px]">
+      <div ref={wrapRef} className="relative h-[112px] w-[150px] sm:h-[160px] sm:w-[232px] lg:h-[200px] lg:w-[290px]">
         <canvas ref={canvasRef} role="img" aria-label={[region, countryName].filter(Boolean).join(", ")} />
         {/* A flag on a pole planted at the farm; the canvas moves it with the globe. */}
         <div ref={pinRef} className="pointer-events-none absolute left-0 top-0 h-0 w-0 opacity-0" aria-hidden="true">
-          <span className="absolute bottom-0 left-0 h-[17px] w-px -translate-x-1/2 bg-white/90" />
-          <Flag country={country} className="absolute bottom-[7px] left-0 h-[10px] w-[15px] rounded-[1px]" />
+          <span className="absolute bottom-0 left-0 h-[22px] w-px -translate-x-1/2 bg-white/90" />
+          <Flag country={country} className="absolute bottom-[9px] left-0 h-[13px] w-[19px] rounded-[1px]" />
         </div>
       </div>
       <figcaption className="flex flex-col items-center gap-0.5 text-center" dir="auto">
