@@ -10,6 +10,7 @@ import { useT } from "@/i18n";
 import { cropLabel } from "@/lib/cropNames";
 import { estimateStage } from "@/lib/fieldStage";
 import { cn } from "@/lib/utils";
+import { usualSoil } from "@/lib/soil";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -31,6 +32,7 @@ export default function FieldPage() {
   const field = useMemo(() => (fields || []).find((f) => f.id === id), [fields, id]);
   const [editing, setEditing] = useState(isNew);
   const [form, setForm] = useState(null);
+  const usual = profile?.country === "US" ? null : usualSoil(profile?.district)?.soil;
 
   useEffect(() => {
     if (form) return;
@@ -43,10 +45,11 @@ export default function FieldPage() {
         acres: "",
         sown: today(),
         irrigation_methods: profile.irrigation_methods || [],
-        soil_type: profile.soil_type || "",
+        soil_type: profile.soil_type || usual || "",
         notes: "",
       });
-    else if (field) setForm({ group: Object.keys(GROUPS).find((g) => GROUPS[g].includes(field.crop)) || "crops", ...field });
+    // A field without its own soil type starts from the farm's soil (or the usual soil for the district).
+    else if (field) setForm({ group: Object.keys(GROUPS).find((g) => GROUPS[g].includes(field.crop)) || "crops", ...field, soil_type: field.soil_type || profile?.soil_type || usual || "" });
   }, [isNew, profile, field, form]);
 
   if (!fields || !form) {
@@ -131,7 +134,7 @@ export default function FieldPage() {
             <FormField label={t("Soil type")}>
               <select className={inputClass} value={form.soil_type || ""} onChange={set("soil_type")}>
                 <option value="">{t("Not set")}</option>
-                {SOIL_OPTIONS.map((o) => <option key={o.id} value={o.id}>{lang === "en" ? o.id : o.ur}</option>)}
+                {SOIL_OPTIONS.map((o) => <option key={o.id} value={o.id}>{lang === "en" ? o.id : o.ur}{o.id === usual ? ` · ${t("Usual in your area")}` : ""}</option>)}
               </select>
             </FormField>
           </div>
@@ -191,7 +194,10 @@ export default function FieldPage() {
             {row(t("Area"), t("{n} acres", { n: field.acres }))}
             {row(t("Sowing or planting date"), field.sown)}
             {row(t("Water"), water.join(lang === "en" ? ", " : "، "))}
-            {row(t("Soil type"), field.soil_type ? (lang === "en" ? field.soil_type : SOIL_OPTIONS.find((o) => o.id === field.soil_type)?.ur) : null)}
+            {(() => {
+              const soil = field.soil_type || profile?.soil_type || usual;
+              return row(t("Soil type"), soil ? (lang === "en" ? soil : SOIL_OPTIONS.find((o) => o.id === soil)?.ur) : null);
+            })()}
             {field.notes && row(t("Notes"), field.notes)}
           </dl>
         </section>

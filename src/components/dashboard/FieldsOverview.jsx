@@ -104,10 +104,10 @@ function FieldCard({ f, demo, onReport }) {
       <Link to={`/fields/${f.id}`} className="group flex items-center gap-2.5 focus-ring">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-xl" aria-hidden="true">{CROP_EMOJI[f.crop] || "🌱"}</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold group-hover:text-primary">{cropLabel(f.crop, lang)}</span>
+          <span className="block truncate text-sm font-semibold group-hover:text-primary">{cropLabel(f.crop, lang)}</span>
           <span className="block truncate text-xs text-muted-foreground" dir="auto">{t(f.name)}{f.variety ? `, ${f.variety}` : ""}</span>
         </span>
-        <span className="text-[11px] tabular-nums text-muted-foreground">{t("{n} acres", { n: f.acres })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">{t("{n} acres", { n: f.acres })}</span>
       </Link>
 
       {f.sown ? (
@@ -137,8 +137,9 @@ function FieldCard({ f, demo, onReport }) {
           {est && pct == null && <p className="mt-2 text-xs font-medium">{t(est.stage)}</p>}
         </div>
       ) : (
-        <Link to={`/fields/${f.id}`} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-dashed border-harvest/60 px-3 py-2 text-xs font-medium text-harvest hover:bg-harvest/10 focus-ring">
-          <CalendarPlus className="h-4 w-4" aria-hidden="true" /> {t("Add the sowing date to see the crop stage")}
+        // Same size and place in every card: a full-width, fixed-height button right under the crop name.
+        <Link to={`/fields/${f.id}`} className="mt-3 flex h-11 items-center gap-2 rounded-xl border border-dashed border-harvest/60 px-3 text-xs font-medium text-highlight hover:bg-harvest/10 focus-ring" data-testid="add-sowing-date">
+          <CalendarPlus className="h-4 w-4 shrink-0" aria-hidden="true" /> <span className="line-clamp-2">{t("Add the sowing date to see the crop stage")}</span>
         </Link>
       )}
 

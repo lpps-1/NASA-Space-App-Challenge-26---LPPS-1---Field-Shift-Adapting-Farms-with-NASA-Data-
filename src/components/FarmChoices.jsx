@@ -149,8 +149,8 @@ export function CropYearStrip({ rotation, currentCrops = [], previousCrops = [],
             ? band(whole, "bg-field text-white", 12, t("All year"))
             : (
               <>
-                {band(rabi, rabi ? "bg-harvest text-soil" : hero ? "bg-white/10 text-white/60" : "bg-secondary text-muted-foreground", 7, t("Rabi (winter)"))}
-                {band(kharif, kharif ? "bg-field text-white" : hero ? "bg-white/10 text-white/60" : "bg-secondary text-muted-foreground", 5, t("Kharif (summer)"))}
+                {band(rabi, rabi ? "bg-harvest text-soil" : hero ? "bg-white/10 text-white/60" : "bg-secondary text-muted-foreground", 7, t("Winter season"))}
+                {band(kharif, kharif ? "bg-field text-white" : hero ? "bg-white/10 text-white/60" : "bg-secondary text-muted-foreground", 5, t("Summer season"))}
               </>
             )}
         </div>
@@ -167,7 +167,7 @@ export function CropYearStrip({ rotation, currentCrops = [], previousCrops = [],
         ))}
       </div>
       <figcaption className="sr-only">
-        {whole ? `${whole} all year.` : `Rabi: ${rabi || "not set"}. Kharif: ${kharif || "not set"}.`} Today is in {season === "rabi" ? "Rabi" : "Kharif"}.
+        {whole ? `${whole} all year.` : `Winter season: ${rabi || "not set"}. Summer season: ${kharif || "not set"}.`} Today is in the {season === "rabi" ? "winter" : "summer"} season.
       </figcaption>
     </figure>
   );

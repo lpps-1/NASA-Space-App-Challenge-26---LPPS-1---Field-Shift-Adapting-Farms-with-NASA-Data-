@@ -21,3 +21,17 @@ export function usualSoil(district) {
   const hit = AREAS.find((a) => a.districts.some((d) => d.toLowerCase() === String(district).toLowerCase()));
   return hit ? { soil: hit.soil, area: hit.area } : { soil: "Loam", area: null };
 }
+
+/**
+ * The usual soil type at a US farm, from the USDA soil survey map-unit name
+ * (e.g. "Webster clay loam, 0 to 2 percent slopes"). Same shape as usualSoil().
+ */
+export function usualSoilUS(survey) {
+  const name = String(survey?.map_unit || "").toLowerCase();
+  if (!name) return null;
+  const area = survey.map_unit.split(",")[0];
+  if (/saline|sodic|alkali/.test(name)) return { soil: "Saline / kallar", area };
+  if (/sand/.test(name) && !/sandy (clay )?loam/.test(name)) return { soil: "Sandy", area };
+  if (/clay/.test(name) && !/clay loam|loam/.test(name)) return { soil: "Clay", area };
+  return { soil: "Loam", area };
+}

@@ -7,6 +7,7 @@ import { useIsDemo, useProfile, useSettings, useUpdateSettings } from "@/hooks/u
 import { Link } from "react-router-dom";
 import { Languages, Palette, Ruler, UserRound, Volume2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { usePageZoom, ZOOM_STEPS } from "@/hooks/usePageZoom";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 import { onVoicesChanged, speakSample, ttsSupported, unlockSpeech, urduCapableVoices, urduVoicePlan } from "@/lib/voice";
@@ -178,6 +179,7 @@ export default function Settings() {
   const { data: profile } = useProfile();
   const update = useUpdateSettings();
   const { theme, setTheme } = useTheme();
+  const { zoom, setZoom } = usePageZoom();
   const { user, logout } = useAuth();
   const demo = useIsDemo();
   const qc = useQueryClient();
@@ -259,6 +261,9 @@ export default function Settings() {
           <Section id="appearance" icon={Palette} title={t("Appearance")}>
             <Row label={t("Theme")} description={t("Dark is easier on the eyes at night; light is clearer in bright sun.")}>
               <Segmented label={t("Theme")} value={theme} onChange={setTheme} options={[{ value: "dark", label: t("Dark") }, { value: "light", label: t("Light") }]} />
+            </Row>
+            <Row label={t("Page size")} description={t("How big the whole app looks. 90% is the default.")}>
+              <Segmented label={t("Page size")} value={zoom} onChange={setZoom} options={ZOOM_STEPS.map((v) => ({ value: v, label: `${v}%`, testid: `zoom-${v}` }))} />
             </Row>
           </Section>
 

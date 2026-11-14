@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, LogOut, MapPin } from "lucide-react";
 import FormField, { inputClass, Required } from "@/components/FormField";
-import { cropGroupsFor, GROW_TYPES, MAX_CROP_PICKS, SOIL_OPTIONS } from "@/data/fixtures";
+import { CROP_CYCLE_OPTIONS, cropGroupsFor, GROW_TYPES, MAX_CROP_PICKS, SOIL_OPTIONS } from "@/data/fixtures";
+import { cropLabel } from "@/lib/cropNames";
 import LocationPicker from "@/components/LocationPicker";
 import BrandMark from "@/components/BrandMark";
 import { CropChips, CropYearStrip, FarmFacts, GoalPicker, IrrigationPicker } from "@/components/FarmChoices";
@@ -10,7 +11,9 @@ import { useEntityMutations, useFields, useProfile, useUpdateProfile, useUpdateS
 import { useT } from "@/i18n";
 import { useAuth } from "@/lib/AuthContext";
 import { deriveFarmFields } from "@/lib/farmSetup";
-import { usualSoil } from "@/lib/soil";
+import { usualSoil, usualSoilUS } from "@/lib/soil";
+import { useQuery } from "@tanstack/react-query";
+import { kisan } from "@/api/kisanClient";
 import { cn } from "@/lib/utils";
 
 /**
@@ -65,7 +68,14 @@ export default function Onboarding() {
   const groups = cropGroupsFor(country);
 
   // Fill in the usual soil for the farmer's district, until they choose one themselves.
-  const usual = country === "PK" ? usualSoil(f?.district) : null;
+  // US farms: the USDA soil survey at the farm point names the soil (e.g. "Webster clay loam").
+  const { data: usSurvey } = useQuery({
+    queryKey: ["soil-survey", "US", f?.lat ?? null, f?.lng ?? null],
+    queryFn: () => kisan.services.getSoilSurvey({ country: "US", lat: f.lat, lng: f.lng }),
+    enabled: country === "US" && Number.isFinite(f?.lat) && Number.isFinite(f?.lng),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+  const usual = country === "PK" ? usualSoil(f?.district) : usualSoilUS(usSurvey);
   useEffect(() => {
     if (f && usual && !soilTouched && f.soil_type !== usual.soil) set({ soil_type: usual.soil });
   }, [f, usual, soilTouched, set]);
@@ -78,13 +88,26 @@ export default function Onboarding() {
   const cropOptions = growTypes.flatMap((g) => groups[g] || []);
   const soilName = (id) => (lang === "en" ? id : SOIL_OPTIONS.find((o) => o.id === id)?.ur || id);
 
+  // Acres under each crop now. Crops grow side by side on different plots, so we ask, never split the land evenly.
+  // With one crop, it starts as the whole farm.
+  const land = Number(f.land_acres) || 0;
+  const acresOf = (c) => {
+    const v = f.crop_acres?.[c];
+    if (v != null && v !== "") return v;
+    return (f.current_crops || []).length === 1 ? land : "";
+  };
+  const setAcres = (c, v) => set({ crop_acres: { ...(f.crop_acres || {}), [c]: v } });
+  const usedAcres = (f.current_crops || []).reduce((sum, c) => sum + (Number(acresOf(c)) || 0), 0);
+
   const blocker = {
     you: !String(f.display_name || "").trim() && t("Add your name to continue."),
     place: !(f.district && Number.isFinite(f.lat)) && (country === "US" ? t("Search for your nearest town to continue.") : t("Pick your district to continue.")),
     land: !(Number(f.land_acres) > 0)
       ? t("Add how many acres you farm.")
       : !(f.irrigation_methods || []).length && t("Pick at least one water source."),
-    crops: !(f.current_crops || []).length && t("Pick what's in your fields now."),
+    crops: !(f.current_crops || []).length
+      ? t("Pick what's in your fields now.")
+      : (f.current_crops || []).some((c) => !(Number(acresOf(c)) > 0)) && t("Add the acres for each crop."),
     goals: !(f.goals || []).length && t("Pick at least one goal."),
   }[STEPS[step].key];
 
@@ -94,6 +117,7 @@ export default function Onboarding() {
     const { user_id: _id, email: _email, ...patch } = deriveFarmFields({ ...f, grow_types: growTypes });
     await save.mutateAsync({
       ...patch,
+      crop_acres: Object.fromEntries((f.current_crops || []).map((c) => [c, Number(acresOf(c)) || 0])),
       country,
       display_name: String(f.display_name || "").trim().replace(/\s+/g, " "),
       land_acres: Number(f.land_acres) || 0,
@@ -102,10 +126,13 @@ export default function Onboarding() {
       farm_setup_at: new Date().toISOString(),
     });
     // One field per crop in the ground, so the dashboard has something real to show. The farmer adds sowing dates there.
+    // Each crop gets its own field with the acres the farmer gave for it.
     const crops = f.current_crops || [];
     if (!(fields || []).length && crops.length) {
-      const each = Math.round(((Number(f.land_acres) || 0) / crops.length) * 10) / 10;
-      for (const crop of crops) await fieldOps.create.mutateAsync({ name: `${crop} field`, crop, acres: each, sown: "", variety: "" });
+      for (const crop of crops) {
+        const acres = Math.round((Number(acresOf(crop)) || 0) * 10) / 10;
+        await fieldOps.create.mutateAsync({ name: `${crop} field`, crop, acres, sown: "", variety: "", soil_type: f.soil_type || "" });
+      }
     }
     if (country === "US") saveSettings.mutate({ temp_unit: "f" });
     try {
@@ -281,9 +308,14 @@ export default function Onboarding() {
                                 setSoilTouched(true);
                                 set({ soil_type: on ? "" : o.id });
                               }}
-                              className={chip(on)}
+                              className={cn(chip(on), "inline-flex items-center gap-1.5")}
+                              data-testid={`soil-${o.id}`}
                             >
+                              {usual?.soil === o.id && <MapPin className="h-3.5 w-3.5" aria-hidden="true" />}
                               {lang === "en" ? (country === "US" ? o.id.replace(" / kallar", "") : o.id) : o.ur}
+                              {usual?.soil === o.id && (
+                                <span className={cn("rounded-full px-1.5 text-[10px] font-semibold", on ? "bg-primary-foreground/20" : "bg-primary/15 text-primary")}>{t("Usual in your area")}</span>
+                              )}
                             </button>
                           );
                         })}
@@ -327,6 +359,61 @@ export default function Onboarding() {
                     </Question>
                     <Question required title={t("What is in your fields right now?")} hint={t("Pick up to {n}.", { n: MAX_CROP_PICKS })}>
                       <CropChips label={t("Crops in the field now")} options={cropOptions} max={MAX_CROP_PICKS} value={f.current_crops || []} onChange={(v) => set({ current_crops: v })} />
+                    </Question>
+                    {(f.current_crops || []).length > 0 && (
+                      <Question
+                        required
+                        title={t("How many acres is each crop on?")}
+                        hint={t("Most farms grow crops side by side on different plots. Enter the acres for each crop now.")}
+                      >
+                        <ul className="divide-y rounded-2xl border [border-color:var(--card-line)]" data-testid="crop-acres">
+                          {(f.current_crops || []).map((c) => (
+                            <li key={c} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+                              <span className="min-w-[6rem] flex-1 text-sm font-medium">{cropLabel(c, lang)}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                inputMode="decimal"
+                                aria-label={t("Acres of {crop}", { crop: cropLabel(c, lang) })}
+                                className={cn(inputClass, "w-24 text-end tabular-nums")}
+                                value={acresOf(c)}
+                                placeholder="0"
+                                onChange={(e) => setAcres(c, e.target.value === "" ? "" : Number(e.target.value))}
+                              />
+                              <span className="text-xs text-muted-foreground">{t("acres")}</span>
+                              {land > 0 && (
+                                <span className="flex gap-1">
+                                  {[0.25, 0.5, 1].map((share) => {
+                                    const v = Math.round(land * share * 10) / 10;
+                                    return (
+                                      <button key={share} type="button" onClick={() => setAcres(c, v)} className={cn(chip(Number(acresOf(c)) === v), "px-2.5 py-1 text-xs")}>
+                                        {share === 1 ? t("All") : share === 0.5 ? "½" : "¼"}
+                                      </button>
+                                    );
+                                  })}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        {land > 0 && (
+                          <p className={cn("text-xs", usedAcres > land ? "text-highlight" : "text-muted-foreground")} aria-live="polite">
+                            {usedAcres > land
+                              ? t("{used} of {land} acres. That's more than your land: fine if two crops share a field (intercropping); otherwise check the numbers.", { used: Math.round(usedAcres * 10) / 10, land })
+                              : t("{used} of {land} acres under crops now. The rest counts as empty or resting land.", { used: Math.round(usedAcres * 10) / 10, land })}
+                          </p>
+                        )}
+                      </Question>
+                    )}
+                    <Question title={t("How often does the crop on a field change?")} hint={t("Helps Kisan AI plan your rotation at the right pace.")}>
+                      <div className="flex flex-wrap gap-2" data-testid="crop-cycle">
+                        {CROP_CYCLE_OPTIONS.map((o) => (
+                          <button key={o.id} type="button" aria-pressed={f.crop_cycle === o.id} onClick={() => set({ crop_cycle: f.crop_cycle === o.id ? "" : o.id })} className={chip(f.crop_cycle === o.id)}>
+                            {lang === "en" ? o.en : o.ur}
+                          </button>
+                        ))}
+                      </div>
                     </Question>
                     <Question title={t("What did you grow last season?")} hint={t("Pick up to {n}. Helps Kisan AI plan around soil, pests and leftover fertilizer.", { n: MAX_CROP_PICKS })}>
                       <CropChips label={t("Crops last season")} options={cropOptions} max={MAX_CROP_PICKS} value={f.previous_crops || []} onChange={(v) => set({ previous_crops: v })} />

@@ -1,6 +1,9 @@
+import { lazy, Suspense } from "react";
 import { Bot, BookOpen, CloudSun, ExternalLink, Landmark, Satellite } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { useAir, useClimate, useKnowledge, useNasa, useProfile, useSoilSurvey, useWeather } from "@/hooks/useKisanData";
+import { useAir, useClimate, useKnowledge, useNasa, useProfile, useSoilSurvey, useTerrain, useWeather } from "@/hooks/useKisanData";
+
+const FarmMap = lazy(() => import("@/components/FarmMap"));
 import { landSummary, PK_SURVEY_SOURCES } from "@/data/landSurveys";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
@@ -10,6 +13,8 @@ const STATUS = {
   loading: { label: "Loading…", cls: "text-muted-foreground" },
   off: { label: "Not reachable right now", cls: "border-alert/50 text-alert" },
   background: { label: "Background figures", cls: "border-harvest/50 text-harvest" },
+  map: { label: "On your farm map", cls: "border-sky-500/50 text-sky-600 dark:text-sky-400" },
+  reference: { label: "Reference, not connected yet", cls: "text-muted-foreground" },
   planned: { label: "Not connected yet", cls: "text-muted-foreground" },
   ai: { label: "AI-generated", cls: "border-sky-500/50 text-sky-400" },
 };
@@ -63,6 +68,7 @@ export default function DataSources() {
   const { data: weather } = useWeather();
   const { data: air } = useAir();
   const { data: usda, isLoading: usdaLoading } = useSoilSurvey();
+  const { data: terrain, isLoading: terrainLoading } = useTerrain();
   const { data: articles = [] } = useKnowledge();
   const us = profile?.country === "US";
   const land = profile ? landSummary(profile, usda) : null;
@@ -77,7 +83,11 @@ export default function DataSources() {
         description={t("Which satellite and government survey data the app uses, what each one is used for, and what it does not know. Nothing here is hidden behind the advice.")}
       />
 
-      <Group icon={Satellite} title="NASA Earth observation" intro="Climate history and recent conditions come from NASA. They are the evidence behind every rotation score.">
+      <Suspense fallback={<div className="kisan-card h-96 animate-pulse" />}>
+        <FarmMap />
+      </Suspense>
+
+      <Group icon={Satellite} title="NASA Earth observation" intro="The datasets named in the NASA challenge. Climate history and slope feed every rotation score; the satellite maps show the conditions around your farm.">
         <Source
           name="NASA POWER: 20-year climate"
           by="NASA Langley Research Center. Built from satellite observations and the MERRA-2 and GEOS models."
@@ -95,11 +105,54 @@ export default function DataSources() {
           href="https://power.larc.nasa.gov/docs/methodology/"
         />
         <Source
-          name="SMAP, GPM, MODIS, Landsat, ECOSTRESS, GRACE-FO"
-          by="NASA missions for soil moisture, rainfall, vegetation, field-scale imagery, crop water stress and groundwater"
-          use="Not used directly yet. Field-scale soil moisture, vegetation greenness and groundwater trends would sharpen the scores, and are the next step."
+          name="SRTM: elevation and slope"
+          by="NASA Shuttle Radar Topography Mission, 30 m"
+          use="Height and slope of the land around your farm. On sloping land, rotations that leave the soil bare get an erosion warning and a lower risk score."
+          status={st(terrain, terrainLoading)}
+          detail={terrain ? `${terrain.elevation_m} m, ${terrain.slope_pct}% ${t("slope")} (${t(terrain.erosion_risk)} ${t("erosion risk")})` : null}
+          href="https://www.earthdata.nasa.gov/data/instruments/srtm"
+        />
+        <Source
+          name="SMAP: soil moisture"
+          by="NASA Soil Moisture Active Passive, Level 4 root zone, 9 km"
+          use="Daily map of water in the top metre of soil around your farm: an early sign of drought stress."
+          status="map"
+          href="https://smap.jpl.nasa.gov/"
+        />
+        <Source
+          name="GPM IMERG: rainfall"
+          by="NASA Global Precipitation Measurement, 10 km"
+          use="The latest day's rainfall across your region on the farm map."
+          status="map"
+          href="https://gpm.nasa.gov/data/imerg"
+        />
+        <Source
+          name="MODIS: crop greenness (NDVI) and ground heat"
+          by="NASA Terra satellite, 250 m to 1 km"
+          use="Which land is green and growing or bare, and how hot the ground gets in the day."
+          status="map"
+          href="https://modis.gsfc.nasa.gov/"
+        />
+        <Source
+          name="Landsat (HLS): field-scale image"
+          by="NASA / USGS Harmonized Landsat Sentinel-2, 30 m"
+          use="A real-colour satellite image of the fields around your farm."
+          status="map"
+          href="https://www.earthdata.nasa.gov/data/projects/hls"
+        />
+        <Source
+          name="GRACE / GRACE-FO: groundwater trend"
+          by="NASA and German gravity missions, monthly, about 300 km"
+          use="Whether water stored underground in your region is rising or falling. The newest published map is from mid-2022."
+          status="map"
+          href="https://grace.jpl.nasa.gov/"
+        />
+        <Source
+          name="ECOSTRESS, NLDAS / GLDAS"
+          by="NASA crop-water-stress and land-data models"
+          use="Field-scale evaporation and modelled soil water. They need an Earthdata login to download, so they are the next step. MODIS ground heat stands in on the map."
           status="planned"
-          href="https://www.earthdata.nasa.gov/"
+          href="https://ecostress.jpl.nasa.gov/"
         />
       </Group>
 
@@ -134,11 +187,50 @@ export default function DataSources() {
               detail={profile?.soil_type ? `${t("Your farm")}: ${profile.soil_type}` : null}
             />
             <Source
+              name="Agricultural Census of Pakistan"
+              by="Pakistan Bureau of Statistics"
+              use="Farm sizes, area under each crop by district and how land is irrigated. Background for typical farms in your district."
+              status="reference"
+              href="https://www.pbs.gov.pk/"
+            />
+            <Source
+              name="Crop Reporting Service and Economic Survey"
+              by="Punjab Agriculture Department; Ministry of Finance, Government of Pakistan"
+              use="Crop area, yield and sowing figures by district and season. Used to check the typical crop figures."
+              status="reference"
+              href="https://www.finance.gov.pk/"
+            />
+            <Source
               name="USDA NRCS Soil Survey (SSURGO)"
               by="United States Department of Agriculture"
               use="Used live for farms in the United States. Choose United States as your country in My farm to see it."
               status="planned"
               href="https://websoilsurvey.nrcs.usda.gov/"
+            />
+          </>
+        )}
+        {us && (
+          <>
+            <Source
+              name="Cropland Data Layer (CropScape)"
+              by="USDA National Agricultural Statistics Service, 30 m, yearly"
+              use="Which crop grew on each field in past years: the real rotations around your farm."
+              status="reference"
+              href="https://nassgeodata.gmu.edu/CropScape/"
+            />
+            <Source
+              name="PRISM climate, NLCD land cover, NAIP imagery"
+              by="Oregon State University; USGS; USDA Farm Service Agency"
+              use="Local climate normals and frost dates, land cover near the field, and 1 m aerial photos."
+              status="reference"
+              href="https://prism.oregonstate.edu/"
+            />
+            <Source
+              name="USDA Ag Data Commons"
+              by="United States Department of Agriculture"
+              use="Open research datasets on soils, crops and field management."
+              status="reference"
+              href="https://agdatacommons.nal.usda.gov/"
             />
           </>
         )}

@@ -10,6 +10,7 @@ import FormField, { PrimaryButton, inputClass } from "@/components/FormField";
 import { MAX_CROP_PICKS, SOIL_OPTIONS } from "@/data/fixtures";
 import { CropChips, GoalPicker, IrrigationPicker } from "@/components/FarmChoices";
 import { deriveFarmFields } from "@/lib/farmSetup";
+import { usualSoil } from "@/lib/soil";
 import LocationPicker from "@/components/LocationPicker";
 import { useFields, useProfile, useUpdateProfile } from "@/hooks/useKisanData";
 import Avatar from "@/components/Avatar";
@@ -85,7 +86,7 @@ export default function Profile() {
             <FormField label={t("Soil type")}>
               <select className={inputClass} value={form.soil_type || ""} onChange={set("soil_type")}>
                 <option value="">{t("Not set")}</option>
-                {SOIL_OPTIONS.map((o) => <option key={o.id} value={o.id}>{lang === "en" ? o.id : o.ur}</option>)}
+                {SOIL_OPTIONS.map((o) => <option key={o.id} value={o.id}>{lang === "en" ? o.id : o.ur}{form.country !== "US" && o.id === usualSoil(form.district)?.soil ? ` · ${t("Usual in your area")}` : ""}</option>)}
               </select>
             </FormField>
           </div>
