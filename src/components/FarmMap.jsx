@@ -1,10 +1,14 @@
-import { useState } from "react";
-import { CircleMarker, MapContainer, TileLayer, Tooltip } from "react-leaflet";
+import { useEffect, useMemo, useState } from "react";
+import { CircleMarker, GeoJSON, MapContainer, Polygon, TileLayer, Tooltip, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Mountain, Satellite } from "lucide-react";
+import { Globe2, LocateFixed, Mountain, Satellite } from "lucide-react";
 import { useProfile, useTerrain } from "@/hooks/useKisanData";
 import { useT } from "@/i18n";
+import { useTheme } from "@/hooks/useTheme";
+import COVERED from "@/data/coveredCountries.json";
 import { cn } from "@/lib/utils";
+import Flag from "@/components/Flag";
 
 /**
  * The farm on a map with NASA satellite layers on top, from NASA GIBS
@@ -64,6 +68,32 @@ export const NASA_LAYERS = [
   },
 ];
 
+
+// Only Pakistan and the United States are covered: everything else is greyed out with a mask
+// (the whole world as one polygon, with the two countries cut out as holes).
+const swap = (ring) => ring.map(([lng, lat]) => [lat, lng]);
+const HOLES = COVERED.features.flatMap((f) =>
+  f.geometry.type === "Polygon" ? [swap(f.geometry.coordinates[0])] : f.geometry.coordinates.map((poly) => swap(poly[0]))
+);
+const WORLD = [
+  [-89.9, -360],
+  [89.9, -360],
+  [89.9, 360],
+  [-89.9, 360],
+];
+const boundsOf = (id) => L.geoJSON(COVERED.features.find((f) => f.properties.id === id)).getBounds();
+
+/** Moves the map when a view button is pressed. */
+function FlyTo({ target }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!target) return;
+    if (target.point) map.flyTo(target.point, 8, { duration: 0.8 });
+    else map.flyToBounds(target.bounds, { padding: [20, 20], duration: 0.8 });
+  }, [target, map]);
+  return null;
+}
+
 const SLOPE_TEXT = {
   flat: "Flat land",
   gentle: "Gentle slope",
@@ -79,6 +109,15 @@ export default function FarmMap({ className }) {
   const [opacity, setOpacity] = useState(0.75);
   const layer = NASA_LAYERS.find((l) => l.id === layerId);
   const hasPoint = Number.isFinite(profile?.lat) && Number.isFinite(profile?.lng);
+  const { theme } = useTheme();
+  const [target, setTarget] = useState(null);
+  const home = profile?.country === "US" ? "US" : "PK";
+  const start = useMemo(() => (hasPoint ? { center: [profile.lat, profile.lng], zoom: 7 } : { bounds: boundsOf(home) }), [hasPoint, profile?.lat, profile?.lng, home]);
+  const base =
+    theme === "dark"
+      ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const viewBtn = "inline-flex items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur hover:bg-card focus-ring";
 
   return (
     <section className={cn("kisan-card p-5 sm:p-6", className)} aria-labelledby="farm-map-title" data-testid="farm-map">
@@ -113,19 +152,49 @@ export default function FarmMap({ className }) {
         ))}
       </div>
 
-      {hasPoint ? (
-        <div className="relative mt-3 h-80 overflow-hidden rounded-xl border [border-color:var(--card-line)] sm:h-96">
-          <MapContainer center={[profile.lat, profile.lng]} zoom={8} minZoom={3} maxZoom={13} scrollWheelZoom={false} className="h-full w-full" attributionControl>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" maxZoom={19} />
-            <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" />
+      <div className="relative mt-3 h-[26rem] overflow-hidden rounded-xl border [border-color:var(--card-line)] sm:h-[30rem]">
+        <MapContainer
+          {...(start.bounds ? { bounds: start.bounds } : { center: start.center, zoom: start.zoom })}
+          minZoom={2}
+          maxZoom={13}
+          worldCopyJump
+          scrollWheelZoom={false}
+          className="h-full w-full bg-secondary"
+          attributionControl
+        >
+          <TileLayer key={base} url={base} attribution="&copy; OpenStreetMap contributors &copy; CARTO" subdomains="abcd" maxZoom={19} />
+          <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" />
+          {/* Grey out every country the app doesn't cover yet. */}
+          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#0b1210" : "#6b7280", fillOpacity: 0.82 }} interactive={false} />
+          <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
+          {hasPoint && (
             <CircleMarker center={[profile.lat, profile.lng]} radius={7} pathOptions={{ color: "#F2C94C", weight: 3, fillColor: "#123D2A", fillOpacity: 1 }}>
               <Tooltip direction="top" offset={[0, -6]}>{profile.district || t("Your farm")}</Tooltip>
             </CircleMarker>
-          </MapContainer>
+          )}
+          <FlyTo target={target} />
+        </MapContainer>
+
+        {/* Quick views, on top of the map. */}
+        <div className="pointer-events-none absolute inset-x-2 top-2 z-[500] flex flex-wrap justify-end gap-1.5">
+          {hasPoint && (
+            <button type="button" className={cn(viewBtn, "pointer-events-auto")} onClick={() => setTarget({ point: [profile.lat, profile.lng], at: Date.now() })}>
+              <LocateFixed className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> {t("My farm")}
+            </button>
+          )}
+          <button type="button" className={cn(viewBtn, "pointer-events-auto")} onClick={() => setTarget({ bounds: boundsOf("PK"), at: Date.now() })}>
+            <Flag country="PK" className="h-3 w-4" /> {t("Pakistan")}
+          </button>
+          <button type="button" className={cn(viewBtn, "pointer-events-auto")} onClick={() => setTarget({ bounds: boundsOf("US"), at: Date.now() })}>
+            <Flag country="US" className="h-3 w-4" /> {t("United States")}
+          </button>
         </div>
-      ) : (
-        <p className="mt-3 rounded-xl bg-secondary/60 px-3 py-6 text-center text-sm text-muted-foreground">{t("Set your farm location under My farm to see the map.")}</p>
-      )}
+        <p className="pointer-events-none absolute bottom-2 start-2 z-[500] flex items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-[11px] shadow-sm backdrop-blur" data-testid="coverage-note">
+          <Globe2 className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+          {t("Kisan AI covers Pakistan and the United States only. Other countries are greyed out.")}
+        </p>
+      </div>
+      {!hasPoint && <p className="mt-2 text-xs text-muted-foreground">{t("Set your farm location under My farm to see your farm on the map.")}</p>}
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">

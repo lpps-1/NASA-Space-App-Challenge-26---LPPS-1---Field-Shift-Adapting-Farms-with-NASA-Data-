@@ -226,7 +226,7 @@ export const AuthProvider = ({ children }) => {
           persist(null); // the Identity session ended (expired or signed out in another tab)
         }
       } else if (AUTH_HASH.test(window.location.hash)) {
-        setAuthNotice('Netlify Identity is not available here, so this sign-in link cannot be used.');
+        setAuthNotice('Online accounts are not available on this site, so this sign-in link cannot be used.');
       }
       if (AUTH_HASH.test(window.location.hash)) window.history.replaceState(null, '', window.location.pathname);
       setProcessing(false);
@@ -274,10 +274,10 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = useCallback(async () => {
     const settings = await ensureSettings();
     if (settings.status !== 'on') {
-      throw new Error('Google sign-in works on your live Netlify site once Identity is turned on. It can\'t run in a plain local preview.');
+      throw new Error('Google sign-in is not available yet. Use email and password, or explore the demo farm.');
     }
     if (!settings.providers?.google) {
-      throw new Error('Google sign-in is not turned on yet. In Netlify, open Identity → Registration → External providers and add Google.');
+      throw new Error('Google sign-in is not turned on yet. Use email and password, or explore the demo farm.');
     }
     oauthLogin('google');
   }, [ensureSettings]);

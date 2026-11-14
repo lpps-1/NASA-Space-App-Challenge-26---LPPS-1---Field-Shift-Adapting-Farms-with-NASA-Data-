@@ -33,7 +33,21 @@ This file is how they tell each other what was done last and what is left.
 
 **Last updated:** 14 Nov 2026
 
-**Last task done:** the 13 changes from Majid's `Improvements.docx` (one commit):
+**Last task done:** second round of Majid's feedback (one commit, 14 Nov afternoon):
+- **Hosting is Vercel, not Netlify.** The old `netlify/` folder is now `server/` (`server/functions/*.mjs` handlers, `server/lib/` shared code); `api/*.js` are the Vercel entry points; `netlify.toml` is gone; `server/lib/gemini.mjs` only reads `GEMINI_API_KEY` (no Netlify AI Gateway). Docs and policies say Vercel.
+- **Chat works with Gemini** once `GEMINI_API_KEY` is set in Vercel (Settings → Environment Variables, then redeploy). Locally it's in `.env.local` (git-ignored; never commit the key). Tested: answers stream.
+- **Chat page**: no title/description at the top; language, Conversation mode and Speak aloud sit under the message box like Claude; send arrow points right (left in Urdu); spoken replies **off by default**; the plans panel can be hidden (button top-right, remembered in `kisan-plans-collapsed`).
+- **Settings is a popup** (`src/pages/Settings.jsx` exports `SettingsDialog`, opened with `openSettings()` from `src/lib/settingsDialog.js`; `/settings` opens it over the dashboard).
+- **Footer**: flat, full width, attached to the page bottom, no logo; not on the chat page.
+- **Farm setup**: the farm card is on the right in English and on the left in Urdu/Punjabi.
+- **Tools**: Pakistan / United States switch at the top; it changes regions, average prices (`US_INPUT_PRICES_USD`, `US_SEED_PRICES_USD` in fixtures) and currency. The tool list no longer stretches apart.
+- **Rotation table**: fixed equal columns; chips, score rings and titles line up.
+- **Map**: dark/light CARTO base map, Pakistan and US outlined (`src/data/coveredCountries.json`, Natural Earth), every other country greyed out with a note, quick-view buttons (My farm / Pakistan / United States).
+- **Policy pages**: new shared `LegalPage` layout (title block, "On this page" list, numbered sections); content updated for Vercel and the new data sources.
+
+- **Merged into `main` with Abdullah's globe and Rotation work** (14 Nov, ~15:10). Kept Abdullah's comparison-table redesign and added only: chips on one line (`whitespace-nowrap h-6`) and rotation names in a fixed 3-line box, so rings and names line up. Also fixed a rename slip: `package.json` must say `@netlify/functions` (the folder rename had changed it to `@server/functions`, which breaks `npm install`).
+
+**Earlier (first round):** the 13 changes from Majid's `Improvements.docx`:
 - **Sidebar** (`src/components/Layout.jsx`): rebuilt like Claude's. Fixed, full height, edge to edge, flat (no bubble). Closes to an icon rail (button at the top, remembered in `kisan-sidebar-collapsed`). Order: New chat → sections → Recent chats → account menu (Settings, theme, sign out). Phones get a flat top bar and a slide-in drawer; the floating bottom tabs are gone.
 - **Page size**: 90% by default, 70–110% in Settings → Appearance (`src/hooks/usePageZoom.js`, key `kisan-zoom`). It scales the root font size, not CSS `zoom`, because `zoom` broke `100vh` heights.
 - **Rotation popup** (`RotationWelcome.jsx`): minimal card with fade/scale in and out (`.kisan-dialog` / `.kisan-overlay` in `index.css`), small close icon.

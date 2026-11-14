@@ -188,11 +188,11 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
                 return (
                   <th key={s.id} scope="col" className={cn("border-t-[3px] p-0 align-top font-normal", on ? "border-t-harvest" : "border-t-transparent", colBand(on))}>
                     <button type="button" onClick={() => onSelect(s.id)} aria-pressed={on} className="flex h-full min-h-[13rem] w-full flex-col items-center gap-2.5 px-3 py-4 text-center transition-colors hover:bg-secondary/40 focus-ring">
-                      <span className={cn("kisan-chip text-[10px]", s.isCurrent ? "border-harvest/60 text-harvest" : isBest && "border-primary/60 bg-primary/15 text-emerald-600 dark:text-emerald-400")}>
+                      <span className={cn("kisan-chip h-6 whitespace-nowrap text-[10px]", s.isCurrent ? "border-harvest/60 text-harvest" : isBest && "border-primary/60 bg-primary/15 text-emerald-600 dark:text-emerald-400")}>
                         {s.isCurrent ? t("You grow this now") : isBest ? <><Trophy className="h-3 w-3" aria-hidden="true" /> {t("Best fit")}</> : t("Option {n}", { n: i })}
                       </span>
                       <Ring value={s.total} best={s.total === bestTotal} />
-                      <span className="flex min-h-[2.75rem] items-start font-display text-[15px] leading-snug" dir="auto">{rotationTitle(s, lang)}</span>
+                      <span className="line-clamp-3 min-h-[3.9em] font-display text-[15px] leading-[1.3]" dir="auto" title={rotationTitle(s, lang)}>{rotationTitle(s, lang)}</span>
                       <span className={cn("mt-auto text-[11px] font-medium", on ? "text-harvest" : "text-muted-foreground")}>{on ? t("Open below") : t("Tap for details")}</span>
                     </button>
                   </th>

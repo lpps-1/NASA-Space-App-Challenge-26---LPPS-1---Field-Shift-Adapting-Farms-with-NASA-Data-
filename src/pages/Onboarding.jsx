@@ -168,36 +168,9 @@ export default function Onboarding() {
   const answered = [f.display_name, f.district, Number(f.land_acres) > 0, (f.current_crops || []).length, (f.goals || []).length].filter(Boolean).length;
 
   return (
-    // In Urdu and Punjabi the page is right-to-left, so the farm card sits on the right.
-    <div className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(340px,420px)_1fr]" data-testid="onboarding">
-      {/* The farm card fills in as the farmer answers. */}
-      <aside className="kisan-hero m-3 hidden flex-col rounded-[22px] p-8 lg:sticky lg:top-3 lg:flex lg:h-[calc(100vh-1.5rem)]" data-testid="farm-card">
-        <div className="relative flex items-center gap-3">
-          <BrandMark />
-          <p className="font-display text-xl text-white">{t("Kisan AI")}</p>
-        </div>
-        <div className="relative mt-auto">
-          <p className="text-sm text-white/60">{t("Your farm")}</p>
-          <p className="mt-1 truncate font-display text-3xl text-white" dir="auto">
-            {String(f.display_name || "").trim() || t("Kisan")}
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
-              <div className="h-full rounded-full bg-harvest transition-all duration-500" style={{ width: `${(answered / 5) * 100}%` }} />
-            </div>
-            <span className="text-xs tabular-nums text-white/70">{answered}/5</span>
-          </div>
-          <div className="mt-6">
-            <CropYearStrip rotation={f.rotation} currentCrops={f.current_crops} previousCrops={f.previous_crops} tone="hero" />
-          </div>
-          <div className="mt-6 text-white">
-            <FarmFacts profile={f} tone="hero" />
-          </div>
-          <p className="mt-6 text-xs leading-relaxed text-white/50">
-            {t("Kisan AI uses these answers in every reply, so its advice fits your land, water and season. You can change them later under My farm.")}
-          </p>
-        </div>
-      </aside>
+    // Questions first, farm card after: in English (left to right) the card sits on the right;
+    // in Urdu and Punjabi the page is right-to-left, so it moves to the left.
+    <div className="min-h-screen bg-background lg:grid lg:grid-cols-[1fr_minmax(340px,420px)]" data-testid="onboarding">
 
       <main className="flex min-h-screen flex-col">
         <header className="flex items-center justify-between gap-4 px-4 pt-4 sm:px-8 lg:px-12 lg:pt-8">
@@ -462,6 +435,34 @@ export default function Onboarding() {
           </div>
         </footer>
       </main>
+      {/* The farm card fills in as the farmer answers. */}
+      <aside className="kisan-hero m-3 hidden flex-col rounded-[22px] p-8 lg:sticky lg:top-3 lg:flex lg:h-[calc(100vh-1.5rem)]" data-testid="farm-card">
+        <div className="relative flex items-center gap-3">
+          <BrandMark />
+          <p className="font-display text-xl text-white">{t("Kisan AI")}</p>
+        </div>
+        <div className="relative mt-auto">
+          <p className="text-sm text-white/60">{t("Your farm")}</p>
+          <p className="mt-1 truncate font-display text-3xl text-white" dir="auto">
+            {String(f.display_name || "").trim() || t("Kisan")}
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/15">
+              <div className="h-full rounded-full bg-harvest transition-all duration-500" style={{ width: `${(answered / 5) * 100}%` }} />
+            </div>
+            <span className="text-xs tabular-nums text-white/70">{answered}/5</span>
+          </div>
+          <div className="mt-6">
+            <CropYearStrip rotation={f.rotation} currentCrops={f.current_crops} previousCrops={f.previous_crops} tone="hero" />
+          </div>
+          <div className="mt-6 text-white">
+            <FarmFacts profile={f} tone="hero" />
+          </div>
+          <p className="mt-6 text-xs leading-relaxed text-white/50">
+            {t("Kisan AI uses these answers in every reply, so its advice fits your land, water and season. You can change them later under My farm.")}
+          </p>
+        </div>
+      </aside>
     </div>
   );
 }

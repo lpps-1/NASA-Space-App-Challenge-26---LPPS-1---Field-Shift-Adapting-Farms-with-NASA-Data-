@@ -33,6 +33,8 @@ import { detectLanguage } from "@/lib/language";
 import BrandMark from "@/components/BrandMark";
 import Avatar from "@/components/Avatar";
 import RotationWelcome from "@/components/RotationWelcome";
+import SettingsDialog from "@/pages/Settings";
+import { openSettings } from "@/lib/settingsDialog";
 
 // Kisan AI (the chat) comes first and is the home page; the rotation planner is the app's main tool.
 const NAV = [
@@ -128,7 +130,6 @@ function AccountMenu({ collapsed }) {
   const { t } = useT();
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
-  const navigate = useNavigate();
   const { data: profile } = useProfile();
   const name = displayNameOf(profile) || FALLBACK_NAME;
   const item = "flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-secondary";
@@ -153,7 +154,7 @@ function AccountMenu({ collapsed }) {
         <Menu.Content side="top" align="start" sideOffset={6} className="kisan-menu z-50 w-60 rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg">
           <p className="truncate px-2.5 py-2 text-xs text-muted-foreground">{user?.email}</p>
           <Menu.Separator className="my-1 h-px bg-border" />
-          <Menu.Item className={item} onSelect={() => navigate("/settings")}>
+          <Menu.Item className={item} onSelect={() => openSettings()}>
             <SettingsIcon className="h-4 w-4" aria-hidden="true" /> {t("Settings")}
           </Menu.Item>
           <Menu.Item
@@ -304,6 +305,7 @@ export default function Layout() {
       </main>
 
       <RotationWelcome />
+      <SettingsDialog />
     </div>
   );
 }

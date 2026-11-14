@@ -5,12 +5,12 @@ import { gemini } from "../lib/gemini.mjs";
  * Body: raw audio bytes. The app sends 16 kHz mono WAV. WebM/Ogg/MP4/MP3 are accepted too.
  * Response: { text: string, language: "ur" | "en" | "pa" | "other" | "none" }
  *
- * Speech recognition runs on Gemini (multimodal audio input) through your GEMINI_API_KEY or Netlify AI Gateway (see netlify/lib/gemini.mjs).
+ * Speech recognition runs on Gemini (multimodal audio input) through your GEMINI_API_KEY (see server/lib/gemini.mjs).
  */
 
 
 const MODEL = "gemini-3-flash-preview";
-const MAX_BYTES = 4 * 1024 * 1024; // the body arrives base64-encoded, and Netlify's request limit is 6 MB. The app splits long voice notes into parts below this.
+const MAX_BYTES = 4 * 1024 * 1024; // the body arrives base64-encoded, and Vercel's request body limit is 4.5 MB. The app splits long voice notes into parts below this.
 const MIN_BYTES = 1000;
 
 const TYPES = {
@@ -126,4 +126,3 @@ export default async (req) => {
   }
 };
 
-export const config = { path: "/api/transcribe" };

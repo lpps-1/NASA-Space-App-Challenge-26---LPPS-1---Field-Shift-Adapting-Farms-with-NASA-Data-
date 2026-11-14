@@ -18,11 +18,11 @@ import { airAt, hourlyAt, searchUS, usdaSoilAt, weatherAt } from "@/api/live";
  * read like they did before. Right now every call is served from
  * src/data/fixtures.js plus the browser's localStorage.
  *
- * The assistant and speech recognition already run on Netlify Functions
- * (`/api/assistant`, `/api/transcribe`) backed by Netlify AI Gateway.
+ * The assistant and speech recognition already run on Vercel functions
+ * (`/api/assistant`, `/api/transcribe`, code in server/functions) backed by Google Gemini.
  *
  * Later milestones (PLAN.md) replace the remaining bodies with
- * `fetch('/api/...')` calls backed by Netlify Database. Page code should not
+ * `fetch('/api/...')` calls backed by a server database. Page code should not
  * need to change.
  */
 
@@ -83,7 +83,7 @@ async function getJson(url) {
 
 /**
  * Calls /api/geo, falling back to the bundled copy of the same dataset when the
- * API can't be reached (e.g. offline, or running Vite without Netlify Functions).
+ * API can't be reached (e.g. offline, or running Vite without the API).
  * A 404 from the API is a real "not found" and is not retried locally.
  */
 async function geoCall(path, local) {
@@ -230,7 +230,7 @@ export const kisan = {
       if ([...qs.keys()].length) {
         try {
           const live = await getJson(`/api/weather?${qs}`);
-          // Without Netlify Functions (plain `vite`), the SPA fallback answers with HTML, not weather.
+          // Without the API, the SPA fallback answers with HTML, not weather.
           if (live?.now && Array.isArray(live.forecast)) {
             // The air-quality call sometimes times out on the server; ask again from the browser.
             if (!live.air && Number.isFinite(profile?.lat)) live.air = await airAt(profile.lat, profile.lng);
@@ -352,7 +352,7 @@ export const kisan = {
       },
     },
     /**
-     * Streams a Kisan AI reply from /api/assistant (Netlify AI Gateway).
+     * Streams a Kisan AI reply from /api/assistant (Google Gemini).
      * `messages` is the whole conversation so far, ending with the user's turn.
      * Calls onText(delta) as text arrives and onStatus("weather") while a tool runs.
      * Resolves to { role: "assistant", content, stop }.

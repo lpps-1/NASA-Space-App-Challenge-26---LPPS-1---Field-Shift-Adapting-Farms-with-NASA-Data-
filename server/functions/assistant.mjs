@@ -14,11 +14,11 @@ import { getWeather, weatherTool } from "../lib/weather.mjs";
  *   {"type":"language","value":"ur"}     the reply language picked for this turn (see src/lib/language.js)
  *   {"type":"done","stop":"end_turn"}    the reply is complete
  *
- * Model: Google Gemini by default. Set these in Netlify → Environment variables to change it:
+ * Model: Google Gemini by default. Set these in Vercel → Settings → Environment Variables to change it:
  *   KISAN_CHAT_PROVIDER = "gemini" (default) or "claude"
  *   KISAN_CHAT_MODEL    = model id, e.g. "gemini-3.5-flash" (default), "gemini-3.8-flash", "claude-haiku-5-5"
- * Keys: Gemini uses GEMINI_API_KEY or Netlify AI Gateway (netlify/lib/gemini.mjs);
- * Claude uses ANTHROPIC_API_KEY or Netlify AI Gateway.
+ * Keys: Gemini uses GEMINI_API_KEY (server/lib/gemini.mjs);
+ * Claude uses ANTHROPIC_API_KEY.
  */
 
 const PROVIDER = (process.env.KISAN_CHAT_PROVIDER || "gemini").toLowerCase() === "claude" ? "claude" : "gemini";
@@ -296,7 +296,7 @@ export default async (req) => {
           : status === 401 || status === 403 || err?.code === "no_key"
             ? urdu
               ? "کسان AI ابھی سیٹ اپ نہیں ہوا (AI کی چابی موجود نہیں)۔ سائٹ کے مالک کو بتائیں۔"
-              : "Kisan AI isn't set up yet: the AI key is missing or wrong. If you run this site, add GEMINI_API_KEY in your Vercel (or Netlify) environment variables."
+              : "Kisan AI isn't set up yet: the AI key is missing or wrong. If you run this site, add GEMINI_API_KEY in the Vercel project's environment variables and redeploy."
           : status === 429 || isBusyError(err)
             ? urdu
               ? "کسان AI اس وقت مصروف ہے۔ براہ کرم ایک منٹ بعد دوبارہ کوشش کریں۔"
@@ -324,4 +324,3 @@ export default async (req) => {
   });
 };
 
-export const config = { path: "/api/assistant" };

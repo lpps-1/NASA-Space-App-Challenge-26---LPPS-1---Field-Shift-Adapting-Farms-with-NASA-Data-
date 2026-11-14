@@ -1,12 +1,12 @@
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import PageHeader from "@/components/PageHeader";
 import { inputClass } from "@/components/FormField";
 import { kisan } from "@/api/kisanClient";
 import { useIsDemo, useProfile, useSettings, useUpdateSettings } from "@/hooks/useKisanData";
 import { Link } from "react-router-dom";
-import { Languages, Palette, Ruler, UserRound, Volume2 } from "lucide-react";
+import { Languages, Palette, Ruler, UserRound, Volume2, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { closeSettings, setSettingsSection, useSettingsDialog } from "@/lib/settingsDialog";
 import { usePageZoom, ZOOM_STEPS } from "@/hooks/usePageZoom";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
@@ -119,16 +119,11 @@ function Toggle({ checked, onChange, label, description }) {
   );
 }
 
-function Section({ id, icon: Icon, title, hint, children }) {
+function Section({ id, title, hint, children }) {
   return (
-    <section id={id} className="kisan-card scroll-mt-6 px-4 py-2 sm:px-6">
-      <div className="flex items-center gap-3 pt-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary"><Icon className="h-[18px] w-[18px]" aria-hidden="true" /></span>
-        <div>
-          <h2 className="font-display text-lg leading-tight">{title}</h2>
-          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-        </div>
-      </div>
+    <section id={id} aria-labelledby={`${id}-title`}>
+      <h3 id={`${id}-title`} className="text-base font-semibold">{title}</h3>
+      {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       <div className="mt-2 divide-y divide-border">{children}</div>
     </section>
   );
@@ -166,14 +161,16 @@ function Segmented({ value, options, onChange, label }) {
 }
 
 const SECTIONS = [
-  { id: "language", label: "Language", icon: Languages },
+  { id: "general", label: "Language", icon: Languages },
   { id: "voice", label: "Voice assistant", icon: Volume2 },
   { id: "units", label: "Units and region", icon: Ruler },
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "account", label: "Account and data", icon: UserRound },
 ];
 
-export default function Settings() {
+export default function SettingsDialog() {
+  const { open, section } = useSettingsDialog();
+  const [closing, setClosing] = useState(false);
   const { t, lang, setLang } = useT();
   const { data: s } = useSettings();
   const { data: profile } = useProfile();
@@ -183,116 +180,156 @@ export default function Settings() {
   const { user, logout } = useAuth();
   const demo = useIsDemo();
   const qc = useQueryClient();
-  if (!s) return <div className="kisan-card h-96 animate-pulse" />;
+
+  const close = () => {
+    setClosing(true);
+    setTimeout(() => {
+      closeSettings();
+      setClosing(false);
+    }, 150);
+  };
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e) => e.key === "Escape" && close();
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+  if (!open) return null;
   const set = (k) => (v) => update.mutate({ [k]: v });
-  const ownPrices = Object.values(s.input_prices || {}).filter((v) => Number(v) > 0).length;
+  const ownPrices = Object.values(s?.input_prices || {}).filter((v) => Number(v) > 0).length;
+  const active = SECTIONS.some((x) => x.id === section) ? section : "general";
+
+  const content = !s ? (
+    <div className="h-64 animate-pulse rounded-xl bg-secondary" />
+  ) : active === "general" ? (
+      <Section id="general" icon={Languages} title={t("Language")} hint={t("The language you chose stays the same on every page.")}>
+        <Row label={t("App language")} description={t("The whole app, and Kisan AI's replies, switch to this language.")}>
+          <Segmented label={t("App language")} value={lang} onChange={setLang} options={UI_LANGS.map((l) => ({ value: l.code, label: l.native, testid: `settings-lang-${l.code}` }))} />
+        </Row>
+      </Section>
+  ) : active === "voice" ? (
+      <Section id="voice" icon={Volume2} title={t("Voice assistant")} hint={t("How Kisan AI speaks and listens.")}>
+        <Toggle
+          label={t("Speak replies out loud")}
+          description={s.voice_replies ? t("On: Kisan AI reads every answer to you. The same switch is under the message box in the chat.") : t("Off: Kisan AI stays silent and only shows text. You can still tap Listen on any answer.")}
+          checked={s.voice_replies}
+          onChange={set("voice_replies")}
+        />
+        {s.voice_replies && <VoiceSettings s={s} set={set} />}
+        <Row label={t("Voice input language")} description={t("Language the microphone listens for. Automatic recognises Urdu, Punjabi and English, and Kisan AI replies in the language you spoke.")}>
+          <select className={cn(inputClass, "w-full sm:w-56")} value={s.voice_language === "pa-IN" ? "pa-PK" : s.voice_language || "auto"} onChange={(e) => set("voice_language")(e.target.value)} aria-label={t("Voice input language")}>
+            <option value="auto">{t("Automatic (detect)")}</option>
+            <option value="ur-PK">{t("Urdu")}</option>
+            <option value="pa-PK">{t("Punjabi")}</option>
+            <option value="en-PK">{t("English")}</option>
+          </select>
+        </Row>
+        <Row label={t("When to stop listening")} description={t("Patient waits through short pauses while you think. \"Until I tap stop\" listens to a whole voice note, however long, until you tap the microphone.")}>
+          <select className={cn(inputClass, "w-full sm:w-56")} value={s.listen_mode || "patient"} onChange={(e) => set("listen_mode")(e.target.value)} aria-label={t("When to stop listening")}>
+            <option value="auto">{t("Quick (short pause)")}</option>
+            <option value="patient">{t("Patient (longer pause)")}</option>
+            <option value="manual">{t("Until I tap stop")}</option>
+          </select>
+        </Row>
+        <Toggle
+          label={t("Interrupt by speaking")}
+          description={t("In conversation mode, start talking while Kisan AI is speaking and it stops to listen to you. Works best with headphones.")}
+          checked={s.barge_in !== false}
+          onChange={set("barge_in")}
+        />
+      </Section>
+  ) : active === "units" ? (
+      <Section id="units" icon={Ruler} title={t("Units and region")} hint={t("How numbers are shown.")}>
+        <Row label={t("Temperature")} description={t("Used on the dashboard weather card.")}>
+          <Segmented label={t("Temperature")} value={s.temp_unit === "f" ? "f" : "c"} onChange={set("temp_unit")} options={[{ value: "c", label: "°C" }, { value: "f", label: "°F" }]} />
+        </Row>
+        <Row label={t("Country")} description={t("Sets the crops, seasons, soil survey and schemes the app uses.")}>
+          <Link to="/profile" onClick={closeSettings} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{profile?.country === "US" ? t("United States") : t("Pakistan")} · {t("Change")}</Link>
+        </Row>
+        <Row label={t("Your fertilizer prices")} description={ownPrices ? t("{n} of your own prices are saved and used in the calculators.", { n: ownPrices }) : t("The calculators use average dealer prices until you enter your own in Tools.")}>
+          {ownPrices > 0 ? (
+            <button onClick={() => { set("input_prices")({}); toast.success(t("Back to average prices")); }} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Use average prices")}</button>
+          ) : (
+            <Link to="/tools" onClick={closeSettings} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Open Tools")}</Link>
+          )}
+        </Row>
+        <Toggle label={t("Rain and weather predictions")} description={t("Chance of rain, frost and heat for your district on the dashboard.")} checked={s.weather_alerts} onChange={set("weather_alerts")} />
+      </Section>
+  ) : active === "appearance" ? (
+      <Section id="appearance" icon={Palette} title={t("Appearance")}>
+        <Row label={t("Theme")} description={t("Dark is easier on the eyes at night; light is clearer in bright sun.")}>
+          <Segmented label={t("Theme")} value={theme} onChange={setTheme} options={[{ value: "dark", label: t("Dark") }, { value: "light", label: t("Light") }]} />
+        </Row>
+        <Row label={t("Page size")} description={t("How big the whole app looks. 90% is the default.")}>
+          <Segmented label={t("Page size")} value={zoom} onChange={setZoom} options={ZOOM_STEPS.map((v) => ({ value: v, label: `${v}%`, testid: `zoom-${v}` }))} />
+        </Row>
+      </Section>
+  ) : (
+      <Section id="account" icon={UserRound} title={t("Account and data")} hint={user?.email}>
+        <Row label={t("Where your data lives")} description={t("Your farm, fields, jobs and chats are saved in this browser, not on a server.")}>
+          <Link to="/privacy" onClick={closeSettings} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Privacy Policy")}</Link>
+        </Row>
+        <Row
+          label={demo ? t("Reset demo data") : t("Clear my data")}
+          description={demo ? t("Puts the sample fields, jobs and chats back.") : t("Removes your fields, jobs, chats and settings from this browser. Your name is kept, and farm setup starts again.")}
+        >
+          <button
+            onClick={() => {
+              if (!demo && !window.confirm(t("Clear your fields, jobs, chats and settings from this browser?"))) return;
+              kisan.reset();
+              qc.invalidateQueries();
+              toast.success(demo ? t("Demo data reset. Your name and email were kept.") : t("Your data was cleared."));
+            }}
+            className="shrink-0 rounded-xl border border-border px-4 py-2 text-sm hover:bg-secondary focus-ring"
+          >
+            {demo ? t("Reset demo data") : t("Clear my data")}
+          </button>
+        </Row>
+        <Row label={t("Sign out")} description={t("Your data stays in this browser for next time.")}>
+          <button onClick={logout} className="shrink-0 rounded-xl border border-destructive/40 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 focus-ring">
+            {t("Sign out")}
+          </button>
+        </Row>
+      </Section>
+  );
 
   return (
-    <div>
-      <PageHeader eyebrow={t("Settings")} title={t("Preferences")} description={t("Changes save as you make them.")} />
-      <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav className="hidden lg:block" aria-label={t("Settings")}>
-          <ul className="sticky top-6 space-y-1">
-            {SECTIONS.map((x) => (
-              <li key={x.id}>
-                <a href={`#${x.id}`} className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-ring">
-                  <x.icon className="h-4 w-4" aria-hidden="true" /> {t(x.label)}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <div className="max-w-3xl space-y-5">
-          <Section id="language" icon={Languages} title={t("Language")} hint={t("The language you chose stays the same on every page.")}>
-            <Row label={t("App language")} description={t("The whole app, and Kisan AI's replies, switch to this language.")}>
-              <Segmented label={t("App language")} value={lang} onChange={setLang} options={UI_LANGS.map((l) => ({ value: l.code, label: l.native, testid: `settings-lang-${l.code}` }))} />
-            </Row>
-          </Section>
-
-          <Section id="voice" icon={Volume2} title={t("Voice assistant")} hint={t("How Kisan AI speaks and listens.")}>
-            <Toggle
-              label={t("Speak replies out loud")}
-              description={s.voice_replies ? t("On: Kisan AI reads every answer to you. The same switch is at the top of the chat.") : t("Off: Kisan AI stays silent and only shows text. You can still tap Listen on any answer.")}
-              checked={s.voice_replies}
-              onChange={set("voice_replies")}
-            />
-            {s.voice_replies && <VoiceSettings s={s} set={set} />}
-            <Row label={t("Voice input language")} description={t("Language the microphone listens for. Automatic recognises Urdu, Punjabi and English, and Kisan AI replies in the language you spoke.")}>
-              <select className={cn(inputClass, "w-full sm:w-56")} value={s.voice_language === "pa-IN" ? "pa-PK" : s.voice_language || "auto"} onChange={(e) => set("voice_language")(e.target.value)} aria-label={t("Voice input language")}>
-                <option value="auto">{t("Automatic (detect)")}</option>
-                <option value="ur-PK">{t("Urdu")}</option>
-                <option value="pa-PK">{t("Punjabi")}</option>
-                <option value="en-PK">{t("English")}</option>
-              </select>
-            </Row>
-            <Row label={t("When to stop listening")} description={t("Patient waits through short pauses while you think. \"Until I tap stop\" listens to a whole voice note, however long, until you tap the microphone.")}>
-              <select className={cn(inputClass, "w-full sm:w-56")} value={s.listen_mode || "patient"} onChange={(e) => set("listen_mode")(e.target.value)} aria-label={t("When to stop listening")}>
-                <option value="auto">{t("Quick (short pause)")}</option>
-                <option value="patient">{t("Patient (longer pause)")}</option>
-                <option value="manual">{t("Until I tap stop")}</option>
-              </select>
-            </Row>
-            <Toggle
-              label={t("Interrupt by speaking")}
-              description={t("In conversation mode, start talking while Kisan AI is speaking and it stops to listen to you. Works best with headphones.")}
-              checked={s.barge_in !== false}
-              onChange={set("barge_in")}
-            />
-          </Section>
-
-          <Section id="units" icon={Ruler} title={t("Units and region")} hint={t("How numbers are shown.")}>
-            <Row label={t("Temperature")} description={t("Used on the dashboard weather card.")}>
-              <Segmented label={t("Temperature")} value={s.temp_unit === "f" ? "f" : "c"} onChange={set("temp_unit")} options={[{ value: "c", label: "°C" }, { value: "f", label: "°F" }]} />
-            </Row>
-            <Row label={t("Country")} description={t("Sets the crops, seasons, soil survey and schemes the app uses.")}>
-              <Link to="/profile" className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{profile?.country === "US" ? t("United States") : t("Pakistan")} · {t("Change")}</Link>
-            </Row>
-            <Row label={t("Your fertilizer prices")} description={ownPrices ? t("{n} of your own prices are saved and used in the calculators.", { n: ownPrices }) : t("The calculators use average dealer prices until you enter your own in Tools.")}>
-              {ownPrices > 0 ? (
-                <button onClick={() => { set("input_prices")({}); toast.success(t("Back to average prices")); }} className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Use average prices")}</button>
-              ) : (
-                <Link to="/tools" className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Open Tools")}</Link>
-              )}
-            </Row>
-            <Toggle label={t("Rain and weather predictions")} description={t("Chance of rain, frost and heat for your district on the dashboard.")} checked={s.weather_alerts} onChange={set("weather_alerts")} />
-          </Section>
-
-          <Section id="appearance" icon={Palette} title={t("Appearance")}>
-            <Row label={t("Theme")} description={t("Dark is easier on the eyes at night; light is clearer in bright sun.")}>
-              <Segmented label={t("Theme")} value={theme} onChange={setTheme} options={[{ value: "dark", label: t("Dark") }, { value: "light", label: t("Light") }]} />
-            </Row>
-            <Row label={t("Page size")} description={t("How big the whole app looks. 90% is the default.")}>
-              <Segmented label={t("Page size")} value={zoom} onChange={setZoom} options={ZOOM_STEPS.map((v) => ({ value: v, label: `${v}%`, testid: `zoom-${v}` }))} />
-            </Row>
-          </Section>
-
-          <Section id="account" icon={UserRound} title={t("Account and data")} hint={user?.email}>
-            <Row label={t("Where your data lives")} description={t("Your farm, fields, jobs and chats are saved in this browser, not on a server.")}>
-              <Link to="/privacy" className="kisan-btn-ghost px-3 py-1.5 text-sm focus-ring">{t("Privacy Policy")}</Link>
-            </Row>
-            <Row
-              label={demo ? t("Reset demo data") : t("Clear my data")}
-              description={demo ? t("Puts the sample fields, jobs and chats back.") : t("Removes your fields, jobs, chats and settings from this browser. Your name is kept, and farm setup starts again.")}
-            >
-              <button
-                onClick={() => {
-                  if (!demo && !window.confirm(t("Clear your fields, jobs, chats and settings from this browser?"))) return;
-                  kisan.reset();
-                  qc.invalidateQueries();
-                  toast.success(demo ? t("Demo data reset. Your name and email were kept.") : t("Your data was cleared."));
-                }}
-                className="shrink-0 rounded-xl border border-border px-4 py-2 text-sm hover:bg-secondary focus-ring"
-              >
-                {demo ? t("Reset demo data") : t("Clear my data")}
-              </button>
-            </Row>
-            <Row label={t("Sign out")} description={t("Your data stays in this browser for next time.")}>
-              <button onClick={logout} className="shrink-0 rounded-xl border border-destructive/40 px-4 py-2 text-sm text-destructive hover:bg-destructive/10 focus-ring">
-                {t("Sign out")}
-              </button>
-            </Row>
-          </Section>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="settings-title" data-testid="settings-dialog">
+      <div className="kisan-overlay absolute inset-0 bg-black/50" data-closing={closing || undefined} onClick={close} />
+      <div
+        className="kisan-dialog relative flex h-[min(640px,92vh)] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border bg-card text-card-foreground shadow-2xl sm:rounded-2xl [border-color:var(--card-line)]"
+        data-closing={closing || undefined}
+      >
+        <div className="flex items-center justify-between border-b px-5 py-3.5 [border-color:var(--card-line)]">
+          <h2 id="settings-title" className="text-lg font-semibold">{t("Settings")}</h2>
+          <button onClick={close} className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground focus-ring" aria-label={t("Close")}>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+          <nav className="shrink-0 overflow-x-auto border-b p-2 sm:w-52 sm:border-b-0 sm:border-e [border-color:var(--card-line)]" aria-label={t("Settings")}>
+            <ul className="flex gap-1 sm:flex-col">
+              {SECTIONS.map((x) => (
+                <li key={x.id}>
+                  <button
+                    onClick={() => setSettingsSection(x.id)}
+                    aria-current={active === x.id ? "page" : undefined}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-start text-sm transition-colors focus-ring",
+                      active === x.id ? "bg-secondary font-medium text-foreground" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    )}
+                    data-testid={`settings-tab-${x.id}`}
+                  >
+                    <x.icon className="h-4 w-4" aria-hidden="true" /> {t(x.label)}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4" key={active}>
+            <div className="rise-in">{content}</div>
+          </div>
         </div>
       </div>
     </div>

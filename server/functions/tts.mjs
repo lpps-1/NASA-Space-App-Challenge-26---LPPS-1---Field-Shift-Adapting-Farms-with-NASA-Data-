@@ -15,7 +15,7 @@ import { gemini } from "../lib/gemini.mjs";
  *   KISAN_TTS_MODEL  speech model id to try first
  *   KISAN_TTS_VOICE  Gemini voice name (default "Kore")
  *   KISAN_TTS        "off" to disable and always use the device's voices
- * Key: GEMINI_API_KEY or Netlify AI Gateway (netlify/lib/gemini.mjs).
+ * Key: GEMINI_API_KEY (server/lib/gemini.mjs).
  */
 
 // Current Gemini speech models first (3.8 launched Sept 2026). The 2.5 TTS models are now limited
@@ -142,4 +142,3 @@ export default async (req) => {
   return json(502, { error: "no-model", detail: String(lastErr?.message || "No speech model answered.").slice(0, 200) });
 };
 
-export const config = { path: "/api/tts" };
