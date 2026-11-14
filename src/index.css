@@ -121,6 +121,8 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Page size: 90% by default (rem-based layout scales with it); Settings → Page size changes it (70–110%). */
+    font-size: 90%;
   }
 
   body {
@@ -402,6 +404,23 @@
 @keyframes kisan-fade { from { opacity: 0; } to { opacity: 1; } }
 .kisan-fade { animation: kisan-fade 0.25s ease both; }
 
+/* Minimal dialog: a quick fade and a small scale-up in; the reverse on close. */
+@keyframes kisan-dialog-in { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes kisan-dialog-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(4px) scale(0.98); } }
+@keyframes kisan-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+.kisan-dialog { animation: kisan-dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.kisan-dialog[data-closing] { animation: kisan-dialog-out 0.16s ease-in both; }
+.kisan-overlay { animation: kisan-fade 0.2s ease both; }
+.kisan-overlay[data-closing] { animation: kisan-overlay-out 0.16s ease-in both; }
+
+/* Phone menu drawer and the account menu. */
+@keyframes kisan-drawer { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes kisan-drawer-rtl { from { transform: translateX(100%); } to { transform: none; } }
+.kisan-drawer { animation: kisan-drawer 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.lang-rtl .kisan-drawer { animation-name: kisan-drawer-rtl; }
+@keyframes kisan-menu { from { opacity: 0; transform: translateY(4px) scale(0.98); } to { opacity: 1; transform: none; } }
+.kisan-menu { animation: kisan-menu 0.14s ease-out both; transform-origin: var(--radix-dropdown-menu-content-transform-origin); }
+
 /* Weather chart: the line and fill glide between temperature, rain and wind. */
 .wx-path { transition: d 0.55s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease, fill 0.4s ease; }
 .wx-num { transition: opacity 0.3s ease; }
@@ -414,6 +433,6 @@
 .lang-rtl .kisan-grow { transform-origin: right; }
 
 @media (prefers-reduced-motion: reduce) {
-  .kisan-pop, .kisan-sheet, .kisan-fade, .wx-draw, .kisan-grow { animation: none; }
+  .kisan-pop, .kisan-sheet, .kisan-fade, .wx-draw, .kisan-grow, .kisan-dialog, .kisan-overlay, .kisan-drawer, .kisan-menu { animation: none; }
   .wx-path { transition: none; }
 }

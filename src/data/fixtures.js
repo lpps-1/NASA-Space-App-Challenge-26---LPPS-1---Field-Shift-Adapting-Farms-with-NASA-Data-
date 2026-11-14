@@ -48,7 +48,7 @@ export const CROP_EMOJI = {
 };
 
 export const COUNTRIES = [
-  { id: "PK", en: "Pakistan", ur: "پاکستان", flag: "🇵🇰", note: "Districts and tehsils, Rabi and Kharif seasons, rupees" },
+  { id: "PK", en: "Pakistan", ur: "پاکستان", flag: "🇵🇰", note: "Districts and tehsils, winter and summer seasons, rupees" },
   { id: "US", en: "United States", ur: "امریکہ", flag: "🇺🇸", note: "States and counties, USDA soil survey, dollars" },
 ];
 
@@ -76,6 +76,18 @@ export const SOIL_OPTIONS = [
   { id: "Sandy", ur: "ریتلی" },
   { id: "Saline / kallar", ur: "کلر / شور" },
   { id: "Not sure", ur: "معلوم نہیں" },
+];
+
+/**
+ * How often the crop on a field changes. Farmers grow several crops side by side
+ * on different plots, and many change the crop every season (about every 6 months).
+ */
+export const CROP_CYCLE_OPTIONS = [
+  { id: "season", en: "Every season (about every 6 months)", ur: "ہر موسم میں (تقریباً ہر 6 مہینے)" },
+  { id: "year", en: "Once a year", ur: "سال میں ایک بار" },
+  { id: "multi-year", en: "Every 2–3 years", ur: "ہر 2 سے 3 سال بعد" },
+  { id: "same", en: "Same crop every year (sugarcane, orchard)", ur: "ہر سال وہی فصل (گنا، باغ)" },
+  { id: "varies", en: "It's different on each field", ur: "ہر کھیت میں الگ" },
 ];
 
 /** Which season each crop belongs to in Pakistan: rabi (winter), kharif (summer) or whole year. */

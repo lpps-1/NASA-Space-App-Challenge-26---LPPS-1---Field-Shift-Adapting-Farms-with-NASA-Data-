@@ -108,6 +108,17 @@ export const useClimate = () => {
   });
 };
 
+/** Elevation and slope at the farm from NASA SRTM. */
+export const useTerrain = () => {
+  const { data: p } = useProfile();
+  return useQuery({
+    queryKey: ["terrain", p?.lat ?? null, p?.lng ?? null],
+    queryFn: () => kisan.services.getTerrain(p),
+    enabled: Number.isFinite(p?.lat) && Number.isFinite(p?.lng),
+    staleTime: 7 * 24 * 60 * 60 * 1000,
+  });
+};
+
 // Pakistan district database. Reference data changes rarely, so cache for long.
 const GEO_STALE = 60 * 60 * 1000;
 export const useGeoProvinces = () =>

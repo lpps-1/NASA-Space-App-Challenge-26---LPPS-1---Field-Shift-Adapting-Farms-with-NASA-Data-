@@ -233,6 +233,12 @@ export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = 
   if (crops.includes("Cotton")) risks.push({ crop: "Cotton", kind: "pest", text: "Pink bollworm and whitefly carry over unless cotton sticks are destroyed after picking." });
   if (crops.includes("Maize")) risks.push({ crop: "Maize", kind: "pest", text: "Watch for fall armyworm in maize." });
   if (strategy.id === "corn-corn") risks.push({ crop: "Corn", kind: "pest", text: "Corn after corn builds up corn rootworm and leaf diseases, and usually yields less than corn after soybean." });
+  // Erosion: on sloping land (NASA SRTM), months with bare soil let rain wash the topsoil away.
+  const slope = land.terrain?.slope_pct;
+  if (slope != null && slope >= 3 && bare.length >= 2) {
+    risk -= slope >= 8 ? 10 : 5;
+    risks.push({ kind: "erosion", text: `The land slopes about ${slope}% (NASA SRTM), and the field is bare for ${bare.length} months: heavy rain can wash topsoil away. Keep stubble or a cover crop on it.` });
+  }
   risk = clamp(risk);
 
   // ---- Income and forage (relative).
@@ -310,6 +316,7 @@ export function explain(s, current, climate, land) {
     evidence.push(`NASA climate history couldn't be loaded, so water and heat use typical values for ${us ? "the Corn Belt" : "Punjab"}.`);
   }
   for (const line of land?.lines || []) evidence.push(`${land.live ? "USDA soil survey" : "Government survey"}: ${line}`);
+  if (land?.terrain) evidence.push(`NASA SRTM elevation: about ${land.terrain.elevation_m} m above sea level with a ${land.terrain.slope_pct}% slope around the farm (${land.terrain.erosion_risk} erosion risk when the soil is bare).`);
   evidence.push(us ? "Crop water needs, nitrogen fixing and residue values are typical US figures (USDA / FAO)." : "Crop water needs, nitrogen fixing and residue values are typical figures for Pakistan's plains (FAO / PARC).");
 
   gaps.push(`Weather is from one NASA point for the ${us ? "area" : "district"} (about 50 km), not your exact field.`);

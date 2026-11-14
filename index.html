@@ -17,6 +17,9 @@
         var t = localStorage.getItem("kisan-theme") === "light" ? "light" : "dark";
         document.documentElement.classList.toggle("dark", t === "dark");
         document.documentElement.style.colorScheme = t;
+        // Page size: 90% unless the farmer picked 70–110% in Settings.
+        var z = Number(localStorage.getItem("kisan-zoom"));
+        document.documentElement.style.fontSize = ([70, 80, 90, 100, 110].indexOf(z) >= 0 ? z : 90) + "%";
         var l = localStorage.getItem("kisan-ui-lang");
         if (l === "ur" || l === "pa") {
           document.documentElement.dir = "rtl";

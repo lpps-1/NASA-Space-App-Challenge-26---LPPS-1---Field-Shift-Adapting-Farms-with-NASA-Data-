@@ -319,6 +319,17 @@ export const kisan = {
       }
     },
 
+    /** Elevation and slope at the farm from NASA SRTM (/api/terrain), or null when unavailable. */
+    async getTerrain(profile) {
+      if (!Number.isFinite(profile?.lat) || !Number.isFinite(profile?.lng)) return null;
+      try {
+        const data = await getJson(`/api/terrain?lat=${profile.lat}&lng=${profile.lng}`);
+        return data?.elevation_m != null ? data : null;
+      } catch {
+        return null;
+      }
+    },
+
     /** Pakistan district list (/api/geo, bundled dataset; local fallback offline). */
     geo: {
       async provinces() {

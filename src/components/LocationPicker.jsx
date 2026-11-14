@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import FormField, { inputClass, Required } from "@/components/FormField";
 import { kisan } from "@/api/kisanClient";
 import { COUNTRIES } from "@/data/fixtures";
+import Flag from "@/components/Flag";
 import { useGeoDistrict, useGeoProvince, useGeoProvinces, useGeoSearch, useUSSearch } from "@/hooks/useKisanData";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
@@ -90,7 +91,7 @@ export default function LocationPicker({ value, onChange, className }) {
                   on ? "border-primary bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary))]" : "border-border hover:border-foreground/25 hover:bg-secondary/60"
                 )}
               >
-                <span className="text-3xl leading-none" aria-hidden="true">{c.flag}</span>
+                <Flag country={c.id} className="h-7 w-10" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold">{lang === "en" ? c.en : c.ur}</span>
                   <span className="block text-xs text-muted-foreground">{t(c.note)}</span>
@@ -100,6 +101,9 @@ export default function LocationPicker({ value, onChange, className }) {
             );
           })}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground" data-testid="country-note">
+          {t("Only Pakistan and the United States for now: with the time we had for this project, we started with these two countries. More will follow.")}
+        </p>
       </fieldset>
 
       <div className="col-span-full">

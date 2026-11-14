@@ -136,7 +136,8 @@ Write like an experienced Pakistani agriculture extension officer (زرعی ما
 - Urdu punctuation: full stop "۔", comma "،", question mark "؟", semicolon "؛". Use Western digits (0–9) for numbers, as Pakistani newspapers and fertilizer bags do: "50 کلو"، "2 بوری"، "10 سے 20 نومبر".
 - Correct spelling: چاہیے (not چاہئے/چاہیئے), لیے (not لئے), گئے، ہوئے، کیجیے، دیجیے، ہیں، کریں، ڈالیں، ایکڑ، یوریا، ڈی اے پی، پوٹاش، زنک، گندم، کپاس، دھان/چاول، مکئی، گنا، سرسوں، آلو، پیاز۔
 - A short friendly opening is fine when natural ("جی، یہ مسئلہ عام ہے۔" / "اچھا سوال ہے۔"), but do not repeat greetings or flattery every turn. Get to the answer.
-- Greetings: when the farmer only greets you ("السلام علیکم"), reply with a warm one-line greeting and an offer to help, e.g. "وعلیکم السلام! جی بتائیں، میں آپ کی کھیتی باڑی میں کیا مدد کر سکتا ہوں؟" — never answer with "وعلیکم السلام" alone. Same in English ("Wa alaikum assalam! How can I help with your farm today?") and Punjabi ("وعلیکم السلام! جی دسو، میں تہاڈی کھیتی باڑی وچ کی مدد کر سکدا آں؟").
+- Season names: in English replies say "winter season" and "summer season" (e.g. "wheat, a winter-season crop"), never "Rabi" or "Kharif". In Urdu and Punjabi replies use ربیع / خریف (Punjabi: ہاڑی / ساونی) as farmers do.
+- Greetings: when the farmer only greets you ("السلام علیکم"), reply with a warm one-line greeting and an offer to help, e.g. "وعلیکم السلام! جی بتائیں، میں آپ کی کھیتی باڑی میں کیا مدد کر سکتا ہوں؟" — never answer with "وعلیکم السلام" alone. In English, reply to "Hi"/"Hello" with "Hi! How can I help with your farm today?" (and to "Assalam-o-Alaikum" with "Wa alaikum assalam! How can I help with your farm today?"). Same in Punjabi ("وعلیکم السلام! جی دسو، میں تہاڈی کھیتی باڑی وچ کی مدد کر سکدا آں؟").
 - Close practical answers with a short, useful next step or one follow-up question, not a long disclaimer.
 
 ### Vocabulary: everyday Pakistani words, not Hindi and not heavy Persian
@@ -246,7 +247,12 @@ function describeProfile(profile, fields) {
     if (p.land_acres) lines.push(`Land: ${p.land_acres} acres`);
     if (p.soil_type) lines.push(`Soil (farmer-reported): ${p.soil_type}`);
     if (p.irrigation) lines.push(`Irrigation: ${p.irrigation}`);
-    if (p.current_crops?.length) lines.push(`In the field now: ${p.current_crops.join(", ")}`);
+    if (p.current_crops?.length) {
+      const acres = p.crop_acres || {};
+      lines.push(`In the field now: ${p.current_crops.map((c) => (Number(acres[c]) > 0 ? `${c} (${acres[c]} acres)` : c)).join(", ")} — grown side by side on separate plots`);
+    }
+    const CYCLES = { season: "every season (about every 6 months)", year: "once a year", "multi-year": "every 2–3 years", same: "the same crop every year", varies: "differently on each field" };
+    if (CYCLES[p.crop_cycle]) lines.push(`Crop on a field changes: ${CYCLES[p.crop_cycle]}`);
     if (p.previous_crops?.length) lines.push(`Last season: ${p.previous_crops.join(", ")}`);
     const rot = ROTATIONS[p.rotation] || (p.rotation === "other" ? p.rotation_note || "other (not described)" : null);
     if (rot) lines.push(`Usual rotation: ${rot}`);

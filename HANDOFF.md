@@ -33,14 +33,26 @@ This file is how they tell each other what was done last and what is left.
 
 **Last updated:** 14 Nov 2026
 
-**Last task done:**
-- Uploaded the pre-event prototype to `majid` as 11 commits ("Prototype part N/11 (pre-event)").
-- Added the note on offline work and uploading in parts to `README.md`.
-- Added this file and the "Two Claudes and HANDOFF.md" section to `README.md`.
+**Last task done:** the 13 changes from Majid's `Improvements.docx` (one commit):
+- **Sidebar** (`src/components/Layout.jsx`): rebuilt like Claude's. Fixed, full height, edge to edge, flat (no bubble). Closes to an icon rail (button at the top, remembered in `kisan-sidebar-collapsed`). Order: New chat → sections → Recent chats → account menu (Settings, theme, sign out). Phones get a flat top bar and a slide-in drawer; the floating bottom tabs are gone.
+- **Page size**: 90% by default, 70–110% in Settings → Appearance (`src/hooks/usePageZoom.js`, key `kisan-zoom`). It scales the root font size, not CSS `zoom`, because `zoom` broke `100vh` heights.
+- **Rotation popup** (`RotationWelcome.jsx`): minimal card with fade/scale in and out (`.kisan-dialog` / `.kisan-overlay` in `index.css`), small close icon.
+- **Greeting**: English dashboard says "Hi" (Urdu/Punjabi keep السلام علیکم).
+- **Seasons**: English says "Winter season" / "Summer season"; Urdu ربیع/خریف, Punjabi ہاڑی/ساونی. The AI prompt has the same rule.
+- **Country**: SVG flags (`Flag.jsx`; flag emoji show as letters on Windows) and a note that only Pakistan and the US are covered for now because of time.
+- **Soil**: the usual soil for the area is pre-selected and labelled "Usual in your area" (setup, My farm, field form). US farms get it from the USDA map-unit name (`usualSoilUS` in `src/lib/soil.js`).
+- **Field cards**: "Add the sowing date" button is the same size and height in every card.
+- **Crop split**: setup no longer divides the land equally. It asks acres per crop (crops grow side by side) and how often the crop on a field changes (`crop_acres`, `crop_cycle` on the profile; both sent to the AI).
+- **NASA data**: new `/api/terrain` (NASA SRTM 30 m elevation and slope); slope adds an erosion risk to rotations with bare months. New farm map (`FarmMap.jsx`, Leaflet + NASA GIBS) with MODIS NDVI, SMAP soil moisture, GPM IMERG rain, MODIS ground heat, Landsat HLS and GRACE layers, on Rotation and Data sources. Data sources page lists every challenge dataset plus Pakistan (Agricultural Census, Crop Reporting) and US (CropScape, PRISM/NLCD/NAIP, Ag Data Commons) surveys with honest status.
+- New translations are in `src/i18n/strings3.js`.
 
 **Working on now:** nothing.
 
 **Questions for the other Claude:** none yet.
+
+**Notes:**
+- The "match the LPPS website" look for the popup is approximate: there's no LPPS website source or link on this PC. Once Majid gives the URL, compare and adjust.
+- ECOSTRESS and NLDAS/GLDAS need an Earthdata login to download, so they're listed as "Not connected yet".
 
 ---
 
@@ -62,11 +74,13 @@ From the project status of 14 Nov 2026 (prototype about 40% done). Put your name
 
 | # | Task | Taken by | Done |
 | --- | --- | --- | --- |
-| 1 | Add a second and third NASA dataset (e.g. SMAP soil moisture, MODIS NDVI, GPM rainfall) and show them as evidence in each rotation | | ☐ |
-| 2 | Farm map: field location, NASA data point, soil unit | | ☐ |
+| 1 | Add a second and third NASA dataset (e.g. SMAP soil moisture, MODIS NDVI, GPM rainfall) and show them as evidence in each rotation | Majid's Claude | ☑ SRTM slope in the scores; SMAP, GPM, MODIS, Landsat, GRACE on the map. Still open: read SMAP/NDVI *values* into the scores (needs Earthdata login or a point API) |
+| 2 | Farm map: field location, NASA data point, soil unit | Majid's Claude | ☑ map with farm point and 6 NASA layers |
 | 3 | Get someone who farms or studies agriculture to check the crop figures and top suggestions | | ☐ |
 | 4 | Native-speaker review of the Urdu and Punjabi text (new Punjabi text falls back to Urdu) | | ☐ |
 | 5 | Fix the wheat sowing window: 1–25 Nov in one place, 1–20 Nov in another | | ☐ |
 | 6 | Update or remove the old planning docs (`MIGRATION_PLAN.md`, `PROJECT_AUDIT.md`, `FEATURE_STATUS.md`) that describe an earlier version | | ☐ |
 | 7 | Record the 30-second demo video (rules: no minors on screen, label AI use) | | ☐ |
 | 8 | Write the submission text, describing the pre-event prototype accurately | | ☐ |
+| 9 | Match the rotation popup's animations and close icon to the LPPS website (need the site URL from Majid) | | ☐ |
+| 10 | Native-speaker check of the new Urdu/Punjabi text in `src/i18n/strings3.js` | | ☐ |

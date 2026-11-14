@@ -16,7 +16,6 @@ import {
   Plus,
   RotateCcw,
   Square,
-  Trash2,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -785,7 +784,7 @@ export default function Assistant() {
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-            <section className="flex min-h-[calc(100vh-9rem)] min-w-0 flex-col lg:min-h-[calc(100vh-2rem)]">
+            <section className="flex min-h-[calc(100vh-4.5rem)] min-w-0 flex-col lg:min-h-[calc(100vh-2rem)]">
         {/* Assistant identity + controls */}
         <header className="z-10 flex flex-wrap items-center justify-between gap-3 border-b pb-3 [border-color:hsl(var(--edge))]">
           <div className="relative hidden min-w-0 items-center gap-3 lg:flex">
@@ -923,7 +922,7 @@ export default function Assistant() {
           <div ref={endRef} />
         </div>
 
-        <div className="sticky bottom-16 mx-auto w-full max-w-3xl bg-background pb-4 pt-2 lg:bottom-0 lg:pb-6">
+        <div className="sticky bottom-0 mx-auto w-full max-w-3xl bg-background pb-4 pt-2 lg:pb-6">
           {voiceNotice && !voiceError && (
             <div
               role="alert"

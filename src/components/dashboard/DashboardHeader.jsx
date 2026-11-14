@@ -7,7 +7,7 @@ import { useT } from "@/i18n";
 const GREETING = {
   ur: "السلام علیکم",
   pa: "السلام علیکم",
-  en: "Assalam-o-Alaikum",
+  en: "Hi",
 };
 
 /** Personalised greeting hero. The name always comes from the profile's display_name. */

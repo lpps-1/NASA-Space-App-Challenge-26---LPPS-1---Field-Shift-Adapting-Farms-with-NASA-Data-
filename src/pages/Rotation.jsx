@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, Check, ChevronDown, CloudRain, Droplets, Info, Landmark, Layers, MessagesSquare, Satellite, ShieldAlert, Sprout, Thermometer, Trophy, Wheat } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { useClimate, useProfile, useSoilSurvey, useUpdateProfile } from "@/hooks/useKisanData";
+
+// The map library is large, so it loads only when the map is shown.
+const FarmMap = lazy(() => import("@/components/FarmMap"));
+import { useClimate, useProfile, useSoilSurvey, useTerrain, useUpdateProfile } from "@/hooks/useKisanData";
 import { landSummary } from "@/data/landSurveys";
 import { cropName, monthName, monthsOf, planRotations, rotationTitle, weightsFromGoals } from "@/lib/rotation";
 import { cn } from "@/lib/utils";
@@ -326,7 +329,8 @@ export default function Rotation() {
   const [showAll, setShowAll] = useState(false);
   const [picked, setPicked] = useState(null);
   const w = weights || weightsFromGoals(profile?.goals);
-  const land = useMemo(() => (profile ? landSummary(profile, usda) : null), [profile, usda]);
+  const { data: terrain } = useTerrain();
+  const land = useMemo(() => (profile ? { ...landSummary(profile, usda), terrain: terrain || null } : null), [profile, usda, terrain]);
 
   const plan = useMemo(() => (profile ? planRotations({ profile, climate, weights: w, scenario, land }) : null), [profile, climate, w, scenario, land]);
 
@@ -401,6 +405,9 @@ export default function Rotation() {
           <Details s={selected} plan={plan} lang={lang} order={order} chosen={profile.planned_rotation === selected.id} onChoose={choose} />
 
           {climateLoading ? <div className="kisan-card h-64 animate-pulse" /> : <ClimatePanel climate={climate} scenario={scenario} order={order} />}
+          <Suspense fallback={<div className="kisan-card h-96 animate-pulse" />}>
+            <FarmMap />
+          </Suspense>
           {!climateLoading && !climate && (
             <p className="kisan-card flex gap-2 p-4 text-sm text-muted-foreground">
               <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
