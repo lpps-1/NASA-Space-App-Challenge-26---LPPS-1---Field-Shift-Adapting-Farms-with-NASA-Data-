@@ -232,7 +232,7 @@ export default function SettingsDialog() {
   ) : active === "general" ? (
       <Section id="general" icon={Languages} title={t("Language")} hint={t("The language you chose stays the same on every page.")}>
         <Row label={t("App language")} description={t("The whole app, and Kisan AI's replies, switch to this language.")}>
-          <Segmented label={t("App language")} value={lang} onChange={setLang} options={UI_LANGS.map((l) => ({ value: l.code, label: l.native, testid: `settings-lang-${l.code}` }))} />
+          <Segmented label={t("App language")} value={lang} onChange={setLang} options={UI_LANGS.map((l) => ({ value: l.code, label: l.native === l.label ? l.label : `${l.native} · ${l.label}`, testid: `settings-lang-${l.code}` }))} />
         </Row>
       </Section>
   ) : active === "voice" ? (

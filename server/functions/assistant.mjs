@@ -268,6 +268,9 @@ export default async (req) => {
   // The app is set to Urdu or Punjabi but the message is English (e.g. a question the app wrote for a
   // dashboard button): answer in the app's language. Roman Urdu and Urdu messages are untouched.
   if (lang?.code === "en" && (ctx.appLang === "ur" || ctx.appLang === "pa")) lang = { ...lang, code: ctx.appLang, source: "app" };
+  // Punjabi picked in the app: Shahmukhi Punjabi and Urdu share one script and many words, so a
+  // message that reads as Urdu (or Roman Urdu, or Hindi) is the farmer writing Punjabi. Reply in Punjabi.
+  else if (ctx.appLang === "pa" && ["ur", "ur-Latn", "hi"].includes(lang?.code)) lang = { ...lang, code: "pa", source: "app-pa" };
   // Farm data is fetched only when the model asks for it (get_farm_data), not before every question.
   const directive = languageDirective(lang, { voice: ctx.voice });
 

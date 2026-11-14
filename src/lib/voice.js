@@ -802,6 +802,38 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
   let cloudLang = null;
   let cloudChunks = 0; // chunks sent for the current reply (the first is kept short for a quick start)
   const urls = new Set();
+  // Device voices: a reply streams in one sentence at a time. Speaking each sentence as its own
+  // utterance put a long gap (the engine stopping and starting) at every full stop. Sentences that
+  // arrive while something is already playing wait here and are spoken together as one longer run.
+  let devBuf = [];
+  let devLang = null;
+  let devTimer = null;
+
+  /** Plans buffered sentences as utterances of up to RUN characters and queues them. */
+  const flushDev = () => {
+    clearTimeout(devTimer);
+    devTimer = null;
+    if (!devBuf.length) return;
+    const pieces = devBuf;
+    devBuf = [];
+    const lang = devLang;
+    const opts = getOptions?.() || {};
+    for (const piece of joinShort(pieces, RUN)) {
+      queue.push(
+        planPiece(piece, lang, opts, prepare).then((p) => {
+          if (p.mode === "hindi" || p.mode === "none") warn(lang || scriptLang(piece), p.mode);
+          if (p.mode === "none") stats.missing = lang || scriptLang(piece);
+          return p;
+        })
+      );
+    }
+    pump();
+  };
+  /** Waits for more sentences while the queue still has something to say; flushes once it runs low. */
+  const armDev = () => {
+    clearTimeout(devTimer);
+    devTimer = setTimeout(() => (queue.length ? armDev() : flushDev()), 120);
+  };
 
   const resetStats = () => {
     stats = { spoken: 0, skipped: 0, failed: 0, blocked: false, stopped: false, missing: null };
@@ -930,7 +962,11 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
     if (runningGen === myGen) return;
     runningGen = myGen;
     try {
-      while (queue.length && myGen === gen) {
+      while ((queue.length || devBuf.length) && myGen === gen) {
+        if (!queue.length) {
+          flushDev();
+          continue;
+        }
         const planned = await queue[0];
         if (myGen !== gen) return;
         queue.shift();
@@ -999,7 +1035,6 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
         flushCloud(false);
         return;
       }
-      // Plan each piece now so any server-side conversion starts in parallel.
       const pieces = clean
         .split("\n")
         .flatMap((line) => {
@@ -1007,20 +1042,19 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
           return rest.trim() ? [...sentences, rest.trim()] : sentences;
         })
         .flatMap(split);
-      for (const piece of joinShort(pieces)) {
-        queue.push(
-          planPiece(piece, lang, opts, prepare).then((p) => {
-            if (p.mode === "hindi" || p.mode === "none") warn(lang || scriptLang(piece), p.mode);
-            if (p.mode === "none") stats.missing = lang || scriptLang(piece);
-            return p;
-          })
-        );
-      }
-      pump();
+      if (devLang !== lang && devBuf.length) flushDev(); // never join two languages in one utterance
+      devLang = lang;
+      devBuf.push(...pieces);
+      // Nothing playing yet: start straight away. Otherwise collect until the queue runs low or
+      // the run is long enough, so neighbouring sentences are read without a stop between them.
+      const idle = runningGen < 0 && !queue.length;
+      if (idle || devBuf.join(" ").length >= RUN) flushDev();
+      else armDev();
     },
     /** Marks that no more text will arrive for this reply. */
     close() {
       flushCloud(true);
+      flushDev();
       closed = true;
       if (runningGen < 0 && !queue.length && inReply) finish();
     },
@@ -1030,6 +1064,8 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
       queue = [];
       cloudBuf = "";
       cloudChunks = 0;
+      devBuf = [];
+      clearTimeout(devTimer);
       closed = true;
       abortCurrent?.();
       sharedAudio?.pause();
@@ -1050,8 +1086,14 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
   };
 }
 
-/** Joins neighbouring sentences into utterances of up to ~180 characters (each utterance ends with a pause). */
-function joinShort(pieces, max = 180) {
+/**
+ * Joins neighbouring sentences into one utterance of up to RUN characters. Inside an utterance the
+ * voice makes its normal short pause at a full stop; between utterances the engine stops and starts
+ * again, which is the long gap farmers heard. Kept under ~250 characters because some Chrome voices
+ * cut off utterances that run longer than about 15 seconds.
+ */
+const RUN = 240;
+function joinShort(pieces, max = RUN) {
   const out = [];
   for (const p of pieces) {
     const last = out[out.length - 1];

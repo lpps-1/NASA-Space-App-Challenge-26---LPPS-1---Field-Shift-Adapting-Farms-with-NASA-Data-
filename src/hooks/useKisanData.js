@@ -119,6 +119,26 @@ export const useTerrain = () => {
   });
 };
 
+export const useSatellite = () => {
+  const { data: p } = useProfile();
+  return useQuery({
+    queryKey: ["satellite", p?.lat ?? null, p?.lng ?? null],
+    queryFn: () => kisan.services.getSatellite(p),
+    enabled: Number.isFinite(p?.lat) && Number.isFinite(p?.lng),
+    staleTime: 6 * 60 * 60 * 1000,
+  });
+};
+
+export const useSlopeGrid = () => {
+  const { data: p } = useProfile();
+  return useQuery({
+    queryKey: ["slope-grid", p?.lat ?? null, p?.lng ?? null],
+    queryFn: () => kisan.services.getSlopeGrid(p),
+    enabled: Number.isFinite(p?.lat) && Number.isFinite(p?.lng),
+    staleTime: 7 * 24 * 60 * 60 * 1000,
+  });
+};
+
 // Pakistan district database. Reference data changes rarely, so cache for long.
 const GEO_STALE = 60 * 60 * 1000;
 export const useGeoProvinces = () =>

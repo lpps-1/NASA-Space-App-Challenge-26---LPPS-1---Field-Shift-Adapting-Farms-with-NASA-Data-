@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Polygon, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Polygon, Rectangle, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Globe2, LocateFixed, Mountain, Satellite } from "lucide-react";
-import { useProfile, useTerrain } from "@/hooks/useKisanData";
+import { Globe2, LocateFixed, Mountain, Satellite, TriangleAlert } from "lucide-react";
+import { useProfile, useSlopeGrid, useTerrain } from "@/hooks/useKisanData";
+import VegetationLayer from "@/components/map/VegetationLayer";
 import { useT } from "@/i18n";
 import { useTheme } from "@/hooks/useTheme";
 import COVERED from "@/data/coveredCountries.json";
@@ -20,13 +21,19 @@ const GIBS = (layer, matrix) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/b
 export const NASA_LAYERS = [
   {
     id: "ndvi",
-    name: "Crop greenness (NDVI)",
-    mission: "MODIS Terra · 8-day · 250 m",
-    what: "Green = growing crops or trees; brown = bare or dry land. Shows which months fields stand bare.",
-    url: GIBS("MODIS_Terra_NDVI_8Day", "GoogleMapsCompatible_Level9"),
+    name: "Vegetation types",
+    mission: "MODIS land cover + MODIS NDVI · 250 m – 1 km",
+    what: "Forests, field crops and orchards in different colours. Bare ground, desert, water and towns are left clear. Orchards are farmland that stays green all year; field crops go bare between seasons.",
+    composite: true,
     max: 9,
-    legend: "https://gibs.earthdata.nasa.gov/legends/MODIS_NDVI_H.svg",
-    key: [["#a0522d", "Brown: bare or very dry land (NDVI near 0)"], ["#d9e36b", "Light green: thin or young crops"], ["#1f7a2e", "Dark green: dense, healthy crops or trees (NDVI near 1)"]],
+    legend: null,
+    key: [
+      ["#14534b", "Forest and woodland (MODIS land cover)"],
+      ["#e8891c", "Orchards and fruit trees: farmland green all year"],
+      ["#cddc39", "Field crops, light: thin, young or ripening"],
+      ["#388e3c", "Field crops, bright: dense and growing well"],
+      ["transparent", "Clear: bare soil, desert, water, towns"],
+    ],
   },
   {
     id: "smap",
@@ -100,7 +107,7 @@ function FlyTo({ target }) {
   const map = useMap();
   useEffect(() => {
     if (!target) return;
-    if (target.point) map.flyTo(target.point, 8, { duration: 0.8 });
+    if (target.point) map.flyTo(target.point, target.zoom || 8, { duration: 0.8 });
     else map.flyToBounds(target.bounds, { padding: [20, 20], duration: 0.8 });
   }, [target, map]);
   return null;
@@ -117,6 +124,8 @@ export default function FarmMap({ className }) {
   const { t } = useT();
   const { data: profile } = useProfile();
   const { data: terrain } = useTerrain();
+  const { data: slopeGrid } = useSlopeGrid();
+  const [hotspots, setHotspots] = useState(false);
   const [layerId, setLayerId] = useState("ndvi");
   const [opacity, setOpacity] = useState(0.75);
   const layer = NASA_LAYERS.find((l) => l.id === layerId);
@@ -172,7 +181,7 @@ export default function FarmMap({ className }) {
         <MapContainer
           {...(start.bounds ? { bounds: start.bounds } : { center: start.center, zoom: start.zoom })}
           minZoom={3}
-          maxZoom={11}
+          maxZoom={15}
           worldCopyJump
           scrollWheelZoom="center"
           wheelPxPerZoomLevel={120}
@@ -181,7 +190,11 @@ export default function FarmMap({ className }) {
           attributionControl
         >
           <TileLayer key={base} url={base} maxNativeZoom={8} maxZoom={19} attribution="NASA Blue Marble / Black Marble (GIBS)" />
-          <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
+          {layer.composite ? (
+            <VegetationLayer key="veg" opacity={opacity} />
+          ) : (
+            <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
+          )}
           {/* Grey out every country the app doesn't cover yet. */}
           <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1f2523" : "#a3aaa7", fillOpacity: 1 }} interactive={false} />
           <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
@@ -191,6 +204,22 @@ export default function FarmMap({ className }) {
               <Tooltip direction="top" offset={[0, -6]}>{profile.district || t("Your farm")}</Tooltip>
             </CircleMarker>
           )}
+          {/* Erosion hotspots: slope of each 150 m patch around the farm (NASA SRTM). */}
+          {hotspots &&
+            slopeGrid?.cells.map((c) => {
+              const dLat = slopeGrid.step_m / 2 / 111320;
+              const dLng = slopeGrid.step_m / 2 / (111320 * Math.cos((c.lat * Math.PI) / 180));
+              const color = c.erosion_risk === "high" ? "#d64545" : c.erosion_risk === "medium" ? "#f2a33a" : "#5fb36b";
+              return (
+                <Rectangle
+                  key={`${c.lat},${c.lng}`}
+                  bounds={[[c.lat - dLat, c.lng - dLng], [c.lat + dLat, c.lng + dLng]]}
+                  pathOptions={{ color, weight: 0.5, fillColor: color, fillOpacity: c.erosion_risk === "low" ? 0.15 : 0.55 }}
+                >
+                  <Tooltip>{t("Slope {s}% · erosion risk {r}", { s: c.slope_pct, r: t(c.erosion_risk) })}</Tooltip>
+                </Rectangle>
+              );
+            })}
           <FlyTo target={target} />
           {/* Map scale (like Google Maps): metric and miles. */}
           <ScaleControl position="bottomright" imperial metric />
@@ -201,6 +230,22 @@ export default function FarmMap({ className }) {
           {hasPoint && (
             <button type="button" className={cn(viewBtn, "pointer-events-auto")} onClick={() => setTarget({ point: [profile.lat, profile.lng], at: Date.now() })}>
               <LocateFixed className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> {t("My farm")}
+            </button>
+          )}
+          {hasPoint && slopeGrid?.cells?.length > 0 && (
+            <button
+              type="button"
+              aria-pressed={hotspots}
+              className={cn(viewBtn, "pointer-events-auto", hotspots && "ring-2 ring-harvest")}
+              onClick={() => {
+                setHotspots((v) => !v);
+                if (!hotspots) {
+                  setTarget({ point: [profile.lat, profile.lng], zoom: 14, at: Date.now() });
+                  setLayerId("landsat"); // 30 m image, so the fields show under the slope grid
+                }
+              }}
+            >
+              <TriangleAlert className="h-3.5 w-3.5 text-harvest" aria-hidden="true" /> {t("Erosion hotspots")}
             </button>
           )}
           <button type="button" className={cn(viewBtn, "pointer-events-auto")} onClick={() => setTarget({ bounds: boundsOf("PK"), at: Date.now() })}>
@@ -234,6 +279,13 @@ export default function FarmMap({ className }) {
           <ul className="mt-2 space-y-2 text-xs">
             <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-full border-[3px] border-harvest bg-forest" />{t("Your farm")}</li>
             <li className="flex items-center gap-2.5"><span className="h-0.5 w-3.5 bg-harvest" />{t("Pakistan and United States border")}</li>
+            {hotspots && (
+              <>
+                <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#d64545]" />{t("Erosion hotspot: slope 8% or more")}</li>
+                <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#f2a33a]" />{t("Some erosion risk: slope 3–8%")}</li>
+                <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#5fb36b]/40" />{t("Flat or gentle: under 3%")}</li>
+              </>
+            )}
             <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-sm bg-[#1f2523] dark:bg-[#1f2523]" style={{ background: theme === "dark" ? "#1f2523" : "#a3aaa7" }} />{t("Countries not covered yet")}</li>
           </ul>
           <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">{t("Scroll or use + and − to zoom. The bar in the corner shows distance. Data pixels are coarser than a field, so very close zoom only enlarges them.")}</p>

@@ -99,6 +99,7 @@ You answer only questions about agriculture and farming life. This is a firm pro
 - get_weather: the forecast for the next days. Call it only when the advice depends on upcoming weather (irrigation timing, spraying, sowing or harvest in the coming days).
 
 ## Language
+- Never address the farmer by name (no "Ali sahib", no "Hi Sarah"), in any language. Speak to them directly as "you" (آپ / تُسی).
 - Every turn ends with a "Reply language for this turn" note computed from the user's latest message. Follow it. It is the detected language and script; if the user clearly asked for another language, use theirs. The note is for you only: never write it, its heading or the language name in your answer.
 - Mirror the user: Urdu script → Urdu script; Roman Urdu → Roman Urdu; English → simple English; Punjabi (Shahmukhi or Roman) → Punjabi in the same script, using a simpler common Urdu word whenever you are unsure of a Punjabi word; Sindhi or Pashto → that language if you can do it well, otherwise simple Urdu, and say so politely.
 - Mixed Urdu–English → follow the dominant language and keep the English technical terms farmers actually say (DAP, urea, spray, tube well, SOP, zinc).
@@ -243,8 +244,7 @@ function describeProfile(profile, fields) {
     ]
       .filter(Boolean)
       .join(", ");
-    const name = String(p.display_name || p.full_name || "").trim();
-    if (name) lines.push(`Name: ${name} (the farmer's chosen display name; address them by it now and then — in a greeting or the first reply — but not in every message; in Urdu say "${name} صاحب". Never use their email address or username as a name.)`);
+    // The farmer's name is deliberately not given to the model: replies never address the farmer by name.
     if (p.country === "US") lines.push("Country: United States. Use US crops, units, programmes (USDA, NRCS, FSA, extension service) and dollars, not Pakistani ones.");
     if (loc) lines.push(`Location: ${loc}`);
     if (Number.isFinite(p.lat) && Number.isFinite(p.lng))
@@ -308,7 +308,7 @@ export function buildSystemPrompt({ profile, fields, knowledge, voice }) {
 const DIRECTIVES = {
   ur: "Reply in natural Pakistani Urdu in Urdu (Nastaliq) script, following the Pakistani Urdu guide. Keep only common English input names (DAP, urea, SOP) where farmers use them, and prefer writing them in Urdu letters (ڈی اے پی، یوریا).",
   "ur-Latn": "The user wrote Roman Urdu. Reply in Roman Urdu (Urdu in Latin letters, Pakistani texting style), not English and not Urdu script.",
-  pa: "The user wrote Punjabi in Shahmukhi script. Reply in simple Punjabi in Shahmukhi script; where you are unsure of a Punjabi word, use the common Urdu word.",
+  pa: "Reply in Pakistani Punjabi in Shahmukhi script (Urdu letters), not in Urdu. Use Punjabi grammar and words throughout: تُسی (not آپ), اے / نیں (not ہے / ہیں), دا / دی / دے (not کا / کی / کے), وچ (not میں for 'in'), توں (not سے), نوں (not کو), کرو / لاؤ (not کریں / لگائیں), کنک (wheat), ہاڑی / ساونی (seasons). Use a common Urdu word only where you don't know the Punjabi one.",
   "pa-Latn": "The user wrote Roman Punjabi. Reply in simple Roman Punjabi; where unsure, use common Roman Urdu words.",
   "pa-Guru": "The user wrote Punjabi in Gurmukhi script. Reply in Punjabi in Gurmukhi script if you can do it well, otherwise in simple Urdu.",
   sd: "The user wrote Sindhi. Reply in Sindhi script if you can do it well; otherwise reply in simple Urdu and say so politely in one short line.",
@@ -327,7 +327,7 @@ export function languageDirective(lang, { voice = false } = {}) {
   if (voice && code === "ur-Latn") {
     note = "The user spoke Urdu. Reply in natural Pakistani Urdu in Urdu script (not Roman) because the reply is read aloud.";
   }
-  if (voice && (code === "pa" || code === "pa-Latn" || code === "pa-Guru")) {
+  if (voice && (code === "pa-Latn" || code === "pa-Guru" || code === "pa")) {
     // The farmer spoke Punjabi, so the reply is Punjabi too. It is written in Shahmukhi so the
     // device's Urdu voice can read it aloud (devices almost never have a Pakistani Punjabi voice).
     note =
@@ -336,6 +336,7 @@ export function languageDirective(lang, { voice = false } = {}) {
   if (lang?.mixed && code !== "en") note += " The message mixes in English words; that is normal, keep the reply in the language above.";
   if (lang?.source === "history") note += " (The latest message was too short to tell, so this follows the earlier conversation.)";
   if (lang?.source === "app") note += " (The app is set to this language, so answer in it even though the question is in English.)";
+  if (lang?.source === "app-pa") note += " (The farmer chose Punjabi in the app. The message may look like Urdu because Punjabi is written in the same letters: answer in Punjabi, not Urdu.)";
   if (lang?.source === "profile" || lang?.source === "default") note += " (Language guessed from the farmer's profile; switch if the user writes in another language.)";
   return `## Reply language for this turn\n${note}\n\n## Scope reminder\nAnswer only if this turn is about agriculture or farming (see "Scope: agriculture only"). Otherwise decline briefly in the reply language and invite a farming question.`;
 }

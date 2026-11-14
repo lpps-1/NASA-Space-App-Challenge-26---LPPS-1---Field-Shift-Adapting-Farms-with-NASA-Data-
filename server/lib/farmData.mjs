@@ -3,6 +3,8 @@ import climateHandler from "../functions/climate.mjs";
 import terrainHandler from "../functions/terrain.mjs";
 import { landSummary } from "../../src/data/landSurveys.js";
 import { usdaSoilAt } from "../../src/api/live.js";
+import { satelliteFeatures } from "./satellite.mjs";
+import { satelliteLine } from "../../src/lib/satelliteText.js";
 
 /**
  * The farm's own data, fetched on the server before Kisan AI answers, so the answer is
@@ -29,11 +31,12 @@ export async function farmEvidence(profile) {
   if (!hasPoint && !p.district_id) return null;
   const q = where(p);
 
-  const [recent, climate, terrain, usda] = await Promise.allSettled([
+  const [recent, climate, terrain, usda, sat] = await Promise.allSettled([
     withTimeout(call(nasaHandler, `/api/nasa?${q}`)),
     withTimeout(call(climateHandler, `/api/climate?${q}`), 9000),
     hasPoint ? withTimeout(call(terrainHandler, `/api/terrain?lat=${p.lat}&lng=${p.lng}`)) : Promise.reject(new Error("no point")),
     p.country === "US" && hasPoint ? withTimeout(usdaSoilAt(Number(p.lat), Number(p.lng))) : Promise.resolve(null),
+    hasPoint ? withTimeout(satelliteFeatures(Number(p.lat), Number(p.lng)), 8000) : Promise.resolve(null),
   ]);
   const ok = (r) => (r.status === "fulfilled" ? r.value : null);
   const lines = [];
@@ -66,6 +69,10 @@ export async function farmEvidence(profile) {
   const s = ok(terrain);
   if (s?.elevation_m != null) lines.push(`- NASA SRTM: about ${s.elevation_m} m above sea level, slope about ${s.slope_pct}% around the farm (${s.slope_class}; erosion risk on bare soil: ${s.erosion_risk}).`);
   else if (hasPoint) missing.push("NASA SRTM elevation");
+
+  const satText = satelliteLine(ok(sat));
+  if (satText) lines.push(`- ${satText}`);
+  else if (hasPoint) missing.push("NASA satellite readings (GIBS)");
 
   const land = landSummary(p, ok(usda));
   if (land.lines.length) lines.push(`- ${land.live ? "USDA NRCS soil survey (live, at the farm)" : land.source}: ${land.lines.join(" ")}`);

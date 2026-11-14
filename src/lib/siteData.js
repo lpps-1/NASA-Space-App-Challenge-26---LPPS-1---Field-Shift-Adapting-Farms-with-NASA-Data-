@@ -1,5 +1,6 @@
 import { landSummary } from "@/data/landSurveys";
 import { planRotations, rotationTitle } from "@/lib/rotation";
+import { satelliteLine } from "@/lib/satelliteText";
 
 /**
  * The farm's figures as the website shows them (climate card, NASA data card, slope, soil survey,
@@ -9,7 +10,7 @@ import { planRotations, rotationTitle } from "@/lib/rotation";
  */
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function buildSiteData({ profile, climate, nasa, terrain, usda }) {
+export function buildSiteData({ profile, climate, nasa, terrain, usda, sat, slopeGrid }) {
   if (!profile) return "";
   const out = [];
   const place = [profile.tehsil, profile.district, profile.province].filter(Boolean).join(", ");
@@ -35,13 +36,19 @@ export function buildSiteData({ profile, climate, nasa, terrain, usda }) {
   if (terrain?.elevation_m != null) {
     out.push(`Farm map (NASA SRTM): ${terrain.elevation_m} m above sea level, ${terrain.slope_pct}% slope (${terrain.slope_class}; erosion risk on bare soil ${terrain.erosion_risk}).`);
   }
+  const satText = satelliteLine(sat);
+  if (satText) out.push(satText);
+  if (slopeGrid?.summary) out.push(`Erosion hotspots (NASA SRTM, 150 m grid): ${slopeGrid.summary.high} steep and ${slopeGrid.summary.medium} moderate patches out of ${slopeGrid.summary.cells}, steepest ${slopeGrid.summary.max_slope_pct}%.`);
   const land = landSummary(profile, usda);
   if (land.lines.length) out.push(`Government soil survey (${land.source}): ${land.lines.join(" ")}${land.waterlog ? ` Waterlogging risk used in the scores: ${land.waterlog}.` : ""}`);
 
   try {
-    const plan = planRotations({ profile, climate, land: { ...land, terrain: terrain || null } });
+    const plan = planRotations({ profile, climate, land: { ...land, terrain: terrain || null, sat: sat || null, slopeGrid: slopeGrid || null } });
     const row = (s) => `${rotationTitle(s, "en")}: ${s.total}/100 (water ${s.scores.water}, soil ${s.scores.soil}, income ${s.scores.income}, weather safety ${s.scores.risk}; ${s.irrigation_mm} mm irrigation a year; ${s.bare_months.length} bare months)`;
     out.push(`Rotation planner: you grow now ${row(plan.current)}. Top options: ${plan.top.filter((s) => !s.isCurrent).map(row).join("; ")}.`);
+    if (plan.statistical) out.push(`20-year statistical check (each year of NASA weather replayed): best is ${plan.statistical.rows.find((r) => r.id === plan.statistical.stat_top)?.crops.join(" → ")}; rank agreement with the planner ${plan.statistical.agreement}.`);
+    const effects = plan.current.sat_effects || [];
+    if (effects.length) out.push(`Satellite effects on the current rotation's scores: ${effects.map((e) => e.text).join(" ")}`);
   } catch {
     /* not enough answers for the planner yet */
   }

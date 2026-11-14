@@ -7,7 +7,8 @@ import InfoTip from "@/components/InfoTip";
 
 // The map library is large, so it loads only when the map is shown.
 const FarmMap = lazy(() => import("@/components/FarmMap"));
-import { useClimate, useProfile, useSoilSurvey, useTerrain, useUpdateProfile } from "@/hooks/useKisanData";
+import { useClimate, useProfile, useSatellite, useSlopeGrid, useSoilSurvey, useTerrain, useUpdateProfile } from "@/hooks/useKisanData";
+import { FarmLimits, MethodsCompared, SatelliteFeatures } from "@/components/rotation/RotationExtras";
 import { landSummary } from "@/data/landSurveys";
 import { cropName, monthName, monthsOf, planRotations, rotationTitle, weightsFromGoals } from "@/lib/rotation";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ const PRIORITIES = [
 const ROWS = [
   { key: "water", label: "Water saving", icon: Droplets, info: "How little irrigation water the crops need over the year, after counting the rain NASA has recorded for your area. A higher score means more water saved." },
   { key: "soil", label: "Soil health", icon: Layers, info: "How well the crops look after the soil: nitrogen-fixing crops, plant residue that feeds the soil, ground that stays covered, and little erosion on sloping land." },
-  { key: "income", label: "Income", icon: Wheat, info: "Typical net income per acre for these crops, shown as a relative figure. It does not use today's market prices, so check prices before you decide." },
+  { key: "income", label: "Income", icon: Wheat, info: "Typical money per acre a year after growing costs, from typical prices and yields, adjusted for where you sell and for how green your land gets (NASA MODIS). Prices change, so check your local rate before you decide." },
   { key: "risk", label: "Weather safety", icon: ShieldAlert, info: "How safe the crops are from heat, frost, drought, salty or waterlogged soil and very heavy rain. A higher score means fewer things that could go wrong." },
   { key: "forage", label: "Fodder", icon: Sprout, info: "How much feed the rotation gives for your animals. It only appears when livestock is one of your goals." },
 ];
@@ -426,7 +427,12 @@ export default function Rotation() {
   const [picked, setPicked] = useState(null);
   const w = weights || weightsFromGoals(profile?.goals);
   const { data: terrain } = useTerrain();
-  const land = useMemo(() => (profile ? { ...landSummary(profile, usda), terrain: terrain || null } : null), [profile, usda, terrain]);
+  const { data: sat, isLoading: satLoading } = useSatellite();
+  const { data: slopeGrid } = useSlopeGrid();
+  const land = useMemo(
+    () => (profile ? { ...landSummary(profile, usda), terrain: terrain || null, sat: sat || null, slopeGrid: slopeGrid || null } : null),
+    [profile, usda, terrain, sat, slopeGrid],
+  );
 
   const plan = useMemo(() => (profile ? planRotations({ profile, climate, weights: w, scenario, land }) : null), [profile, climate, w, scenario, land]);
 
@@ -514,11 +520,19 @@ export default function Rotation() {
         </section>
       </div>
 
+      <FarmLimits profile={profile} />
+
       <div id="compare" className="scroll-mt-6">
         <CompareTable plan={plan} weights={w} lang={lang} selected={selected.id} onSelect={setPicked} order={order} />
       </div>
 
       <Details s={selected} plan={plan} lang={lang} order={order} chosen={profile.planned_rotation === selected.id} onChoose={choose} />
+
+      {/* Satellite readings that feed the scores, and the second (statistical) method. */}
+      <div className="grid items-stretch gap-6 lg:grid-cols-2">
+        <SatelliteFeatures sat={sat} loading={satLoading} current={plan.current} grid={slopeGrid} />
+        <MethodsCompared statistical={plan.statistical} lang={lang} />
+      </div>
 
       {/* Climate and soil survey: same row, same height. */}
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
@@ -626,7 +640,7 @@ export default function Rotation() {
         <div>
           <p className="font-medium">{t("This tool supports your judgment")}</p>
           <p className="mt-1 text-muted-foreground">
-            {t("Scores compare options using typical crop figures and NASA climate data. They don't know your field's soil test, seed, market or labour. Talk to your agriculture extension officer before changing a rotation.")}
+            {t("Scores compare options using typical crop figures, typical prices, NASA climate and satellite data. They don't know your field's soil test, seed or today's market rate. Talk to your agriculture extension officer before changing a rotation.")}
           </p>
         </div>
       </section>

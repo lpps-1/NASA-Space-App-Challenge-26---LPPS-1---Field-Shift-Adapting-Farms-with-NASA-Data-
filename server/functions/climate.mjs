@@ -34,7 +34,7 @@ function slope(xs, ys) {
 export function summarise(p, firstYear, lastYear) {
   const months = Array.from({ length: 12 }, () => ({ rain: 0, tmax: 0, tmin: 0, soil: 0, nT: 0, nS: 0 }));
   const years = {};
-  for (let y = firstYear; y <= lastYear; y++) years[y] = { rain: 0, heat: 0, frost: 0, heavy: 0, tmax: 0, nT: 0 };
+  for (let y = firstYear; y <= lastYear; y++) years[y] = { rain: 0, heat: 0, frost: 0, heavy: 0, tmax: 0, nT: 0, mRain: Array(12).fill(0), mTmax: Array(12).fill(0), mN: Array(12).fill(0) };
   const ok = (v) => typeof v === "number" && v > -900;
 
   for (const day of Object.keys(p.T2M_MAX || {})) {
@@ -46,6 +46,7 @@ export function summarise(p, firstYear, lastYear) {
     if (ok(rain)) {
       months[m].rain += rain;
       yr.rain += rain;
+      yr.mRain[m] += rain;
       if (rain > 50) yr.heavy++;
     }
     if (ok(tmax) && ok(tmin)) {
@@ -54,6 +55,8 @@ export function summarise(p, firstYear, lastYear) {
       months[m].nT++;
       yr.tmax += tmax;
       yr.nT++;
+      yr.mTmax[m] += tmax;
+      yr.mN[m]++;
       if (tmax > 40) yr.heat++;
       if (tmin < 2) yr.frost++;
     }
@@ -80,6 +83,9 @@ export function summarise(p, firstYear, lastYear) {
       frost_days: v.frost,
       heavy_rain_days: v.heavy,
       tmax_mean_c: r1(v.tmax / v.nT),
+      // Month by month for this year (used by the 20-year statistical check in src/lib/rotation.js).
+      month_rain_mm: v.mRain.map((x) => Math.round(x)),
+      month_tmax_c: v.mTmax.map((x, i) => (v.mN[i] ? r1(x / v.mN[i]) : null)),
     }));
   const xs = yearly.map((y) => y.year);
   const avg = (k) => (yearly.length ? yearly.reduce((a, y) => a + (y[k]), 0) / yearly.length : null);

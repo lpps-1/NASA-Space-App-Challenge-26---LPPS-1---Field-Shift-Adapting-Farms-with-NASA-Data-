@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { Bot, BookOpen, CloudSun, ExternalLink, Landmark, Satellite } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import { useAir, useClimate, useKnowledge, useNasa, useProfile, useSoilSurvey, useTerrain, useWeather } from "@/hooks/useKisanData";
+import { useAir, useClimate, useKnowledge, useNasa, useProfile, useSatellite, useSlopeGrid, useSoilSurvey, useTerrain, useWeather } from "@/hooks/useKisanData";
 
 const FarmMap = lazy(() => import("@/components/FarmMap"));
 import { landSummary, PK_SURVEY_SOURCES } from "@/data/landSurveys";
@@ -14,6 +14,7 @@ const STATUS = {
   off: { label: "Not reachable right now", cls: "border-alert/50 text-alert" },
   background: { label: "Background figures", cls: "border-harvest/50 text-harvest" },
   map: { label: "On your farm map", cls: "border-sky-500/50 text-sky-600 dark:text-sky-400" },
+  scores: { label: "Map + in the scores", cls: "border-field/50 text-field" },
   reference: { label: "Reference, not connected yet", cls: "text-muted-foreground" },
   planned: { label: "Not connected yet", cls: "text-muted-foreground" },
   ai: { label: "AI-generated", cls: "border-sky-500/50 text-sky-400" },
@@ -69,6 +70,9 @@ export default function DataSources() {
   const { data: air } = useAir();
   const { data: usda, isLoading: usdaLoading } = useSoilSurvey();
   const { data: terrain, isLoading: terrainLoading } = useTerrain();
+  const { data: sat, isLoading: satLoading } = useSatellite();
+  const { data: grid } = useSlopeGrid();
+  const satStatus = satLoading ? "loading" : sat ? "scores" : "map";
   const { data: articles = [] } = useKnowledge();
   const us = profile?.country === "US";
   const land = profile ? landSummary(profile, usda) : null;
@@ -87,7 +91,7 @@ export default function DataSources() {
         <FarmMap />
       </Suspense>
 
-      <Group icon={Satellite} title="NASA Earth observation" intro="The datasets named in the NASA challenge. Climate history and slope feed every rotation score; the satellite maps show the conditions around your farm.">
+      <Group icon={Satellite} title="NASA Earth observation" intro="The datasets named in the NASA challenge. Climate history, slope and the satellite readings at your farm pin all feed the rotation scores; the map shows the same images around your farm.">
         <Source
           name="NASA POWER: 20-year climate"
           by="NASA Langley Research Center. Built from satellite observations and the MERRA-2 and GEOS models."
@@ -107,30 +111,33 @@ export default function DataSources() {
         <Source
           name="SRTM: elevation and slope"
           by="NASA Shuttle Radar Topography Mission, 30 m"
-          use="Height and slope of the land around your farm. On sloping land, rotations that leave the soil bare get an erosion warning and a lower risk score."
+          use="Height and slope of the land around your farm, and a 150 m slope grid that marks erosion hotspots on the map. Rotations that leave sloping patches bare get an erosion warning and a lower risk score."
           status={st(terrain, terrainLoading)}
-          detail={terrain ? `${terrain.elevation_m} m, ${terrain.slope_pct}% ${t("slope")} (${t(terrain.erosion_risk)} ${t("erosion risk")})` : null}
+          detail={terrain ? `${terrain.elevation_m} m, ${terrain.slope_pct}% ${t("slope")} (${t(terrain.erosion_risk)} ${t("erosion risk")})${grid?.summary ? ` · ${grid.summary.high + grid.summary.medium}/${grid.summary.cells} ${t("patches slope 3% or more")}` : ""}` : null}
           href="https://www.earthdata.nasa.gov/data/instruments/srtm"
         />
         <Source
           name="SMAP: soil moisture"
           by="NASA Soil Moisture Active Passive, Level 4 root zone, 9 km"
-          use="Daily map of water in the top metre of soil around your farm: an early sign of drought stress."
-          status="map"
+          use="Water in the top metre of soil, read at your farm. Dry soil before sowing lowers the weather-safety score of the crop sown next."
+          status={satStatus}
+          detail={sat?.soil_moisture ? `${sat.soil_moisture.value} m³/m³ · ${sat.soil_moisture.date}` : null}
           href="https://smap.jpl.nasa.gov/"
         />
         <Source
           name="GPM IMERG: rainfall"
           by="NASA Global Precipitation Measurement, 10 km"
-          use="The latest day's rainfall across your region on the farm map."
-          status="map"
+          use="Rain over the last 14 days at your farm (and the latest day on the map). Kisan AI uses it for watering advice."
+          status={satStatus}
+          detail={sat?.rain_14d ? `${sat.rain_14d.value} mm · ${sat.rain_14d.from} → ${sat.rain_14d.to}` : null}
           href="https://gpm.nasa.gov/data/imerg"
         />
         <Source
-          name="MODIS: crop greenness (NDVI) and ground heat"
+          name="MODIS: greenness (NDVI), land cover and ground heat"
           by="NASA Terra satellite, 250 m to 1 km"
-          use="Which land is green and growing or bare, and how hot the ground gets in the day."
-          status="map"
+          use="Which months your land stood bare (soil score), how green it gets at its peak (expected yield), ground heat at heat-sensitive stages (risk score), and the Vegetation types map that tells forests, field crops and orchards apart."
+          status={satStatus}
+          detail={sat?.ndvi_year ? `NDVI ${sat.ndvi?.value ?? "?"} · ${t("peak")} ${sat.ndvi_year.peak} · ${sat.land_cover ? t(sat.land_cover.name) : ""}` : null}
           href="https://modis.gsfc.nasa.gov/"
         />
         <Source
@@ -143,14 +150,15 @@ export default function DataSources() {
         <Source
           name="GRACE / GRACE-FO: groundwater trend"
           by="NASA and German gravity missions, monthly, about 300 km"
-          use="Whether water stored underground in your region is rising or falling. The newest published map is from mid-2022."
-          status="map"
+          use="Whether water stored underground in your region has risen or fallen. Where it has fallen, rotations that need a lot of tube-well water lose water points. The newest map NASA GIBS publishes is from mid-2022, so it shows the long-term direction, not this year."
+          status={satStatus}
+          detail={sat?.groundwater ? `${sat.groundwater.value > 0 ? "+" : ""}${sat.groundwater.value} cm · ${sat.groundwater.date}` : null}
           href="https://grace.jpl.nasa.gov/"
         />
         <Source
           name="ECOSTRESS, NLDAS / GLDAS"
           by="NASA crop-water-stress and land-data models"
-          use="Field-scale evaporation and modelled soil water. They need an Earthdata login to download, so they are the next step. MODIS ground heat stands in on the map."
+          use="Not integrated. ECOSTRESS (70 m evaporation and plant water stress) is not published as NASA GIBS map tiles and needs an Earthdata login to download, so the app does not use it. MODIS ground temperature (1 km) stands in for heat stress, at much coarser detail."
           status="planned"
           href="https://ecostress.jpl.nasa.gov/"
         />
@@ -278,7 +286,11 @@ export default function DataSources() {
           {[
             "Your field's real soil test: nitrogen, organic matter, pH and salt are assumed.",
             "The actual condition of your crop. The stage is worked out from the sowing date, and problems are only what you report.",
-            "Local market prices, mill or buyer demand, labour and machinery.",
+            "Today's price at your market. Income uses typical prices; machinery and where you sell count only if you tick them on the Rotation page.",
+            "ECOSTRESS plant water stress: not integrated. MODIS ground heat stands in at 1 km.",
+            "This year's groundwater: the newest GRACE map in NASA GIBS is from mid-2022.",
+            "A trained AI model for the scores. There are no yield records for single fields to train one honestly, so the scores are open crop rules, checked against a replay of 20 years of NASA weather.",
+            "Your exact field: satellite pixels are 250 m to 9 km, bigger than most fields.",
             "Canal turns, tube-well water quality and groundwater depth at your farm.",
           ].map((x) => (
             <li key={x} className="flex gap-2 rounded-xl bg-secondary/60 px-3 py-2"><span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-harvest" />{t(x)}</li>

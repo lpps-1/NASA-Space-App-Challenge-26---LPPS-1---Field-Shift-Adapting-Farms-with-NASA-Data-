@@ -51,6 +51,117 @@ Object.assign(CROPS.Rice, { wet: 2 });
 Object.assign(CROPS.Sesbania, { wet: 2 });
 Object.assign(CROPS.Berseem, { wet: 2 });
 
+/**
+ * Typical money per acre for one crop, used for the income score: yield, farm-gate price and
+ * growing cost. Pakistan in rupees (yield in maunds of 40 kg, price per maund), United States in
+ * US dollars (yield in bushels, tons or pounds as noted, price per that unit). Approximate
+ * November 2026 figures from government support prices and market reports; local prices differ,
+ * so the page shows them and treats them as typical, not exact.
+ */
+export const MARKET = {
+  PK: {
+    asOf: "November 2026",
+    currency: "Rs",
+    crops: {
+      Wheat: { yield: 32, unit: "maund", price: 3500, cost: 75000 },
+      Rice: { yield: 40, unit: "maund", price: 4300, cost: 110000 },
+      Cotton: { yield: 20, unit: "maund", price: 8500, cost: 120000 },
+      Maize: { yield: 80, unit: "maund", price: 2300, cost: 120000 },
+      Sugarcane: { yield: 700, unit: "maund", price: 425, cost: 190000 },
+      Potato: { yield: 350, unit: "maund", price: 1500, cost: 380000 },
+      Chickpea: { yield: 12, unit: "maund", price: 9000, cost: 45000 },
+      Lentil: { yield: 10, unit: "maund", price: 10000, cost: 45000 },
+      Mustard: { yield: 15, unit: "maund", price: 6000, cost: 45000 },
+      Mungbean: { yield: 10, unit: "maund", price: 9000, cost: 45000 },
+      Sesame: { yield: 8, unit: "maund", price: 11000, cost: 40000 },
+      Berseem: { yield: 1, unit: "acre of green fodder", price: 100000, cost: 50000 },
+      Sorghum: { yield: 1, unit: "acre of green fodder", price: 70000, cost: 35000 },
+      Sesbania: { yield: 0, unit: "green manure", price: 0, cost: 10000 },
+    },
+    full: 250000, // margin per acre a year that scores 100
+  },
+  US: {
+    asOf: "November 2026",
+    currency: "$",
+    crops: {
+      Corn: { yield: 180, unit: "bu", price: 4.2, cost: 600 },
+      Soybean: { yield: 52, unit: "bu", price: 10.2, cost: 380 },
+      "Winter wheat": { yield: 50, unit: "bu", price: 5.5, cost: 230 },
+      "Grain sorghum": { yield: 75, unit: "bu", price: 4, cost: 250 },
+      "Upland cotton": { yield: 850, unit: "lb", price: 0.68, cost: 520 },
+      "Rye cover crop": { yield: 0, unit: "cover crop", price: 0, cost: 40 },
+      Alfalfa: { yield: 4, unit: "ton of hay", price: 200, cost: 550 },
+    },
+    full: 250,
+  },
+};
+
+/**
+ * Machines (or hired crews) each crop really needs. The farmer ticks what they have or can hire
+ * (profile.equipment); a crop that needs something missing is flagged and scored down.
+ */
+export const EQUIPMENT = [
+  { id: "tractor", label: "Tractor" },
+  { id: "seed_drill", label: "Seed drill or planter" },
+  { id: "combine", label: "Combine harvester (own or hired)" },
+  { id: "transplanting", label: "Rice transplanting crew or machine" },
+  { id: "cotton_picking", label: "Cotton pickers (crew or machine)" },
+  { id: "potato_digger", label: "Potato digger and cold store access" },
+  { id: "baler", label: "Baler or fodder chopper" },
+];
+export const CROP_NEEDS = {
+  Wheat: ["combine"],
+  Rice: ["transplanting", "combine"],
+  Cotton: ["cotton_picking"],
+  Potato: ["potato_digger", "tractor"],
+  Sugarcane: ["tractor"],
+  Maize: ["tractor"],
+  Corn: ["seed_drill", "combine"],
+  Soybean: ["seed_drill", "combine"],
+  "Winter wheat": ["seed_drill", "combine"],
+  "Grain sorghum": ["seed_drill", "combine"],
+  "Upland cotton": ["cotton_picking"],
+  Alfalfa: ["baler"],
+};
+
+/** Where the farmer sells (profile.markets). Changes the money a crop is worth to this farm. */
+export const MARKETS = [
+  { id: "mandi", label: "Grain market (mandi / elevator)" },
+  { id: "sugar_mill", label: "Sugar mill nearby" },
+  { id: "contract", label: "Contract with a company (seed, potato, maize)" },
+  { id: "livestock", label: "Feed my own animals" },
+  { id: "home", label: "Food for my household" },
+];
+
+/** Money per acre for one crop on this farm, after the farmer's market choices. */
+export function cropMargin(crop, country, markets = []) {
+  const table = MARKET[country === "US" ? "US" : "PK"];
+  const m = table.crops[crop];
+  if (!m) return null;
+  let price = m.price;
+  const notes = [];
+  const set = new Set(markets || []);
+  if (set.size) {
+    if (crop === "Sugarcane" && !set.has("sugar_mill")) {
+      price *= 0.75;
+      notes.push("No sugar mill nearby: cane loses about a quarter of its value to transport and middlemen.");
+    }
+    if (set.has("contract") && ["Potato", "Maize", "Corn"].includes(crop)) {
+      price *= 1.1;
+      notes.push(`A company contract usually pays about 10% more for ${crop.toLowerCase()} and takes the whole crop.`);
+    }
+    if (set.has("livestock") && ["Berseem", "Sorghum", "Alfalfa"].includes(crop)) {
+      price *= 1.3;
+      notes.push(`${crop} fed to your own animals saves buying fodder, worth more than selling it.`);
+    }
+    if (set.has("home") && ["Wheat", "Winter wheat"].includes(crop)) {
+      price *= 1.05;
+      notes.push("Wheat for the household saves buying flour.");
+    }
+  }
+  return { ...m, crop, price, revenue: Math.round(m.yield * price), margin: Math.round(m.yield * price - m.cost), notes };
+}
+
 /** Candidate rotations (one crop year, Rabi then Kharif). `id`s match ROTATION_OPTIONS where they exist. */
 export const STRATEGIES = [
   { id: "wheat-cotton", crops: ["Wheat", "Cotton"] },
@@ -147,7 +258,7 @@ export function weightsFromGoals(goals = []) {
  * farm: { soil_type, irrigation_methods, goals }.
  * scenario: { tempDelta (°C), rainPct (% change) }.
  */
-export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = {}) {
+export function scoreStrategy(strategy, { climate, farm = {}, scenario = {}, observed = null } = {}) {
   const tempDelta = Number(scenario.tempDelta) || 0;
   const rainFactor = 1 + (Number(scenario.rainPct) || 0) / 100;
   const monthly = climate?.monthly || [];
@@ -155,7 +266,14 @@ export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = 
   const crops = strategy.crops.filter((c) => CROPS[c]);
   const info = crops.map((c) => ({ name: c, ...CROPS[c], months: monthsOf(c) }));
   const families = new Set(info.map((c) => c.family));
-  const bare = strategy.bare || bareMonths(crops);
+  // Satellite readings (server/lib/satellite.mjs). `effects` records what each one changed, for the page.
+  const sat = farm.land?.sat || null;
+  const effects = [];
+  // For the rotation the farmer grows now, the months the satellite actually saw bare ground
+  // (MODIS NDVI below 0.25 over the last 12 months) replace the crop calendar's guess.
+  const seenBare = observed && observed.known >= 9 ? observed.bare_months : null;
+  const bare = seenBare || strategy.bare || bareMonths(crops);
+  if (seenBare) effects.push({ source: "MODIS NDVI, last 12 months", score: "soil", text: `The satellite saw this field bare in ${seenBare.length ? seenBare.map(monthName).join(", ") : "no month"} (greenness below 0.25); used instead of the crop calendar.` });
   const us = strategy.region === "US";
   const years = strategy.years || 1;
   const land = farm.land || {};
@@ -177,6 +295,16 @@ export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = 
   const irrigation = Math.max(0, need - rainUsed);
   let water = clamp(100 - ((irrigation - 150) / 1500) * 100);
   if (soil === "Sandy" && info.some((c) => c.puddled)) water -= 10; // flooded rice leaks through sandy soil
+  // GRACE: where the water stored underground has fallen, every extra mm pumped from a tube well
+  // costs more and lowers the water table further, so thirsty rotations lose more points.
+  const gw = sat?.groundwater?.value;
+  if (gw != null && gw <= -5 && !rainfedOnly && irrigation > 200) {
+    const pen = Math.round(Math.min(15, ((irrigation - 200) / 100) * (Math.abs(gw) / 10)));
+    if (pen > 0) {
+      water -= pen;
+      effects.push({ source: "GRACE groundwater", score: "water", delta: -pen, text: `Water stored underground here is ${Math.abs(gw)} cm below normal (GRACE, ${sat.groundwater.date}); this rotation pumps about ${Math.round(irrigation)} mm a year, so ${pen} water points less.` });
+    }
+  }
 
   // ---- Soil health: legumes, residue, deep roots, diversity; penalties for bare months and puddling.
   const legumes = info.filter((c) => c.nfix).length;
@@ -219,6 +347,41 @@ export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = 
       risks.push({ crop: c.name, kind: "waterlog", text: `${c.name} suffers in waterlogged soil, and the ${us ? "USDA soil survey shows poor drainage or a shallow water table on this land" : "government water-table surveys show a high water table in this province"}.` });
     }
   }
+  // SMAP and MODIS heat: conditions in the field right now, for the crop sown next.
+  const nowMonth = new Date().getMonth() + 1;
+  const ahead = (m) => (m - nowMonth + 12) % 12;
+  const next = info.filter((c) => !c.allYear && ahead(c.sow) <= 2).sort((a, b) => ahead(a.sow) - ahead(b.sow))[0];
+  const sm = sat?.soil_moisture?.value;
+  if (next && sm != null) {
+    if (sm < 0.15 && next.drought < 2) {
+      risk -= 6;
+      effects.push({ source: "SMAP soil moisture", score: "risk", delta: -6, text: `SMAP shows a dry root zone now (${sm} m³/m³): ${next.name}, sown next, needs a watering before sowing (rauni) to come up well.` });
+      risks.push({ crop: next.name, kind: "water", text: `The soil is dry now (NASA SMAP ${sm} m³/m³): water before sowing ${next.name}.` });
+    } else if (sm > 0.4 && next.wet === 0) {
+      risk -= 5;
+      effects.push({ source: "SMAP soil moisture", score: "risk", delta: -5, text: `SMAP shows wet soil now (${sm} m³/m³): ${next.name}, sown next, suffers in wet soil.` });
+      risks.push({ crop: next.name, kind: "waterlog", text: `The soil is very wet now (NASA SMAP ${sm} m³/m³): ${next.name} may rot or yellow if sown before it drains.` });
+    }
+  }
+  const lst = sat?.ground_temp?.value;
+  if (lst != null && lst >= 38) {
+    for (const c of info.filter((x) => x.heatMonths.includes(nowMonth))) {
+      risk -= 5;
+      effects.push({ source: "MODIS ground heat", score: "risk", delta: -5, text: `The ground reads ${lst} °C (MODIS, ${sat.ground_temp.date}) while ${c.name} is at its heat-sensitive stage.` });
+    }
+  }
+  // Farm equipment: a crop that needs a machine or crew the farmer can't get.
+  const kit = farm.equipment;
+  if (Array.isArray(kit) && kit.length) {
+    for (const c of info) {
+      const missing = (CROP_NEEDS[c.name] || []).filter((n) => !kit.includes(n));
+      if (missing.length) {
+        risk -= 8;
+        const names = missing.map((id) => (EQUIPMENT.find((e) => e.id === id)?.label || id).toLowerCase());
+        risks.push({ crop: c.name, kind: "equipment", text: `${c.name} needs: ${names.join("; ")}. You said you don't have or can't hire it.` });
+      }
+    }
+  }
   const heavy = climate?.averages?.heavy_rain_days ?? 0;
   if (heavy >= 1 && info.some((c) => c.name === "Mungbean" || c.name === "Sesame")) {
     risk -= 5;
@@ -234,16 +397,34 @@ export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = 
   if (crops.includes("Maize")) risks.push({ crop: "Maize", kind: "pest", text: "Watch for fall armyworm in maize." });
   if (strategy.id === "corn-corn") risks.push({ crop: "Corn", kind: "pest", text: "Corn after corn builds up corn rootworm and leaf diseases, and usually yields less than corn after soybean." });
   // Erosion: on sloping land (NASA SRTM), months with bare soil let rain wash the topsoil away.
+  // With the 150 m slope grid (erosion hotspots), the share of sloping patches decides it.
   const slope = land.terrain?.slope_pct;
-  if (slope != null && slope >= 3 && bare.length >= 2) {
+  const grid = land.slopeGrid?.summary;
+  const hotShare = grid ? (grid.high + grid.medium * 0.5) / Math.max(1, grid.cells) : null;
+  if (hotShare != null && hotShare >= 0.1 && bare.length >= 2) {
+    const pen = Math.round(Math.min(12, 4 + hotShare * 20));
+    risk -= pen;
+    risks.push({ kind: "erosion", text: `${grid.high + grid.medium} of the ${grid.cells} patches around the farm slope 3% or more (NASA SRTM, up to ${grid.max_slope_pct}%), and the field is bare for ${bare.length} months: rain can wash topsoil off those patches. Keep stubble or a cover crop on them.` });
+    effects.push({ source: "SRTM slope grid", score: "risk", delta: -pen, text: `Erosion hotspots cover about ${Math.round(hotShare * 100)}% of the land around the farm.` });
+  } else if (hotShare == null && slope != null && slope >= 3 && bare.length >= 2) {
     risk -= slope >= 8 ? 10 : 5;
     risks.push({ kind: "erosion", text: `The land slopes about ${slope}% (NASA SRTM), and the field is bare for ${bare.length} months: heavy rain can wash topsoil away. Keep stubble or a cover crop on it.` });
   }
   risk = clamp(risk);
 
-  // ---- Income and forage (relative).
-  const incomeRaw = info.reduce((a, c) => a + c.income, 0) / years;
-  const income = clamp((incomeRaw / (us ? 3 : 6)) * 100);
+  // ---- Income: typical money per acre a year (MARKET), after the farmer's market choices,
+  // scaled by how green this land gets at its peak (MODIS NDVI): weak land yields less.
+  const margins = info.map((c) => cropMargin(c.name, us ? "US" : "PK", farm.markets)).filter(Boolean);
+  const marginRaw = margins.length === info.length ? margins.reduce((a, m) => a + m.margin, 0) / years : null;
+  const peak = sat?.ndvi_year?.peak;
+  const cropland = [10, 12, 14].includes(sat?.land_cover?.class);
+  const vigour = peak != null && cropland ? Math.max(0.8, Math.min(1.1, 0.8 + (peak - 0.45) * 0.8)) : 1;
+  if (vigour !== 1) effects.push({ source: "MODIS NDVI peak", score: "income", text: `This land's greenest month reached NDVI ${peak}, so expected yields are taken as ${Math.round(vigour * 100)}% of typical.` });
+  const marginPerAcre = marginRaw == null ? null : Math.round(marginRaw * vigour);
+  const income =
+    marginPerAcre != null
+      ? clamp((marginPerAcre / MARKET[us ? "US" : "PK"].full) * 100)
+      : clamp((info.reduce((a, c) => a + c.income, 0) / years / (us ? 3 : 6)) * 100);
   const forage = clamp((info.reduce((a, c) => a + c.forage, 0) / 3) * 100);
 
   return {
@@ -258,8 +439,11 @@ export function scoreStrategy(strategy, { climate, farm = {}, scenario = {} } = 
     rain_used_mm: Math.round(rainUsed),
     legumes,
     families: families.size,
-    scores: { water: Math.round(water), soil: Math.round(soilScore), risk: Math.round(risk), income: Math.round(income), forage: Math.round(forage) },
+    scores: { water: Math.round(clamp(water)), soil: Math.round(soilScore), risk: Math.round(risk), income: Math.round(income), forage: Math.round(forage) },
     risks,
+    margin_per_acre: marginPerAcre,
+    margins,
+    sat_effects: effects,
     blocked: rainfedOnly && irrigation > 450 && (monthly.length > 0 || !us) ? "Needs much more water than rain gives, and you don't have irrigation." : null,
   };
 }
@@ -322,7 +506,14 @@ export function explain(s, current, climate, land) {
   gaps.push(`Weather is from one NASA point for the ${us ? "area" : "district"} (about 50 km), not your exact field.`);
   if (land && !land.live) gaps.push(us ? "The USDA soil survey couldn't be loaded for this point, so drainage is assumed to be average." : "Government soil figures are for the whole province and decades old, not for your field.");
   gaps.push("There's no soil test for your field: nitrogen, organic matter and salt levels are assumed.");
-  gaps.push("Market prices and the mill or buyer near you aren't included; check local demand before switching.");
+  if (s.margin_per_acre != null) {
+    const mk = MARKET[us ? "US" : "PK"];
+    const money = (v) => (us ? `$${(Math.round(v * 100) / 100).toLocaleString("en-US")}` : `Rs ${Math.round(v).toLocaleString("en-US")}`);
+    evidence.push(`Income uses typical ${mk.asOf} prices (${s.margins.map((m) => `${m.crop} ${money(m.price)} per ${m.unit}`).join(", ")}): about ${money(s.margin_per_acre)} per acre a year after growing costs.`);
+    for (const m of s.margins) for (const n of m.notes) benefits.push(n);
+    gaps.push("Prices are typical figures, not today's rate at your market; check before switching.");
+  } else gaps.push("Market prices and the mill or buyer near you aren't included; check local demand before switching.");
+  for (const e of s.sat_effects || []) evidence.push(`${e.source}: ${e.text}`);
   if (s.note) gaps.push(s.note);
 
   return { why, benefits, evidence, gaps, risks: s.risks.map((r) => r.text) };
@@ -334,17 +525,101 @@ export function explain(s, current, climate, land) {
  */
 export function planRotations({ profile = {}, climate = null, weights, scenario = {}, land = null } = {}) {
   const w = weights || weightsFromGoals(profile.goals);
-  const farm = { soil_type: profile.soil_type, irrigation_methods: profile.irrigation_methods, goals: profile.goals, land: land || {} };
+  const farm = { soil_type: profile.soil_type, irrigation_methods: profile.irrigation_methods, goals: profile.goals, land: land || {}, equipment: profile.equipment, markets: profile.markets };
+  const yr = land?.sat?.ndvi_year;
+  const observed = yr && [10, 12, 14].includes(land.sat.land_cover?.class) ? { bare_months: yr.bare_months, known: yr.months.filter((m) => m.ndvi != null).length } : null;
   const cur = currentStrategy(profile);
   const candidates = strategiesFor(profile.country);
   const pool = candidates.some((s) => s.id === cur.id) ? candidates : [cur, ...candidates];
   const scored = pool.map((s) => {
-    const r = scoreStrategy(s, { climate, farm, scenario });
+    const r = scoreStrategy(s, { climate, farm, scenario, observed: s.id === cur.id ? observed : null });
     return { ...r, total: r.blocked ? Math.min(overall(r.scores, w), 25) : overall(r.scores, w), isCurrent: s.id === cur.id };
   });
   const current = scored.find((s) => s.isCurrent);
   for (const s of scored) s.explain = explain(s, current, climate, land);
   const ranked = [...scored].sort((a, b) => b.total - a.total);
   const alternatives = ranked.filter((s) => !s.isCurrent && !s.blocked).slice(0, 3);
-  return { current, ranked, top: [current, ...alternatives], weights: w };
+  const statistical = compareMethods(ranked, pool, climate, farm, scenario);
+  return { current, ranked, top: [current, ...alternatives], weights: w, statistical };
+}
+
+/**
+ * Second method, statistical: replays each of the last 20 years of NASA POWER weather at the
+ * farm through a rotation (that year's rain and heat, month by month) and scores every year on
+ * water and weather risk. The result is the average year minus half the spread between years,
+ * so a rotation that does well on average but fails in dry or hot years ranks lower.
+ * The rule-based score uses the 20-year average climate in one pass. Both rankings are shown
+ * side by side so the farmer (or a judge) can see where the two approaches agree.
+ */
+export function historicalCheck(strategy, climate, farm = {}, scenario = {}) {
+  const years = (climate?.yearly || []).filter((y) => Array.isArray(y.month_rain_mm) && Array.isArray(y.month_tmax_c));
+  if (years.length < 8) return null;
+  const tempDelta = Number(scenario.tempDelta) || 0;
+  const rainFactor = 1 + (Number(scenario.rainPct) || 0) / 100;
+  const info = strategy.crops.filter((c) => CROPS[c]).map((c) => ({ name: c, ...CROPS[c], months: monthsOf(c) }));
+  const nYears = strategy.years || 1;
+  const methods = farm.irrigation_methods || [];
+  const rainfedOnly = methods.length > 0 && methods.every((m) => m === "rainfed");
+  const perYear = years.map((y) => {
+    let need = 0, used = 0, hits = 0;
+    for (const c of info) {
+      const rain = c.months.reduce((a, m) => a + (y.month_rain_mm[m - 1] || 0), 0) * rainFactor * 0.7;
+      const cropNeed = c.water * (1 + 0.04 * tempDelta);
+      need += cropNeed;
+      used += Math.min(rain, cropNeed);
+      if (rainfedOnly && cropNeed - rain > 150 && c.drought < 2) hits += 1.5; // a dry year without irrigation
+      for (const m of c.heatMonths) if ((y.month_tmax_c[m - 1] ?? -99) + tempDelta > c.heatMax) hits++;
+    }
+    const irrigation = Math.max(0, (need - used) / nYears);
+    const water = clamp(100 - ((irrigation - 150) / 1500) * 100);
+    const weather = clamp(100 - hits * 15);
+    return { year: y.year, irrigation_mm: Math.round(irrigation), score: (water + weather) / 2, bad: hits > 0 };
+  });
+  const mean = perYear.reduce((a, y) => a + y.score, 0) / perYear.length;
+  const sd = Math.sqrt(perYear.reduce((a, y) => a + (y.score - mean) ** 2, 0) / perYear.length);
+  const worst = perYear.reduce((a, y) => (y.score < a.score ? y : a), perYear[0]);
+  return {
+    years: perYear.length,
+    first_year: years[0].year,
+    last_year: years.at(-1).year,
+    score: Math.round(clamp(mean - sd / 2)),
+    mean: Math.round(mean),
+    spread: Math.round(sd),
+    worst_year: worst.year,
+    worst_score: Math.round(worst.score),
+    bad_years: perYear.filter((y) => y.bad).length,
+  };
+}
+
+/** Spearman rank correlation of two equal-length lists of scores (1 = same order, -1 = reversed). */
+function spearman(a, b) {
+  const n = a.length;
+  if (n < 3) return null;
+  const rank = (xs) => {
+    const r = Array(n);
+    xs.map((v, i) => [v, i]).sort((p, q) => q[0] - p[0]).forEach(([, i], k) => (r[i] = k + 1));
+    return r;
+  };
+  const ra = rank(a), rb = rank(b);
+  const d2 = ra.reduce((s, r, i) => s + (r - rb[i]) ** 2, 0);
+  return Math.round((1 - (6 * d2) / (n * (n * n - 1))) * 100) / 100;
+}
+
+function compareMethods(ranked, pool, climate, farm, scenario) {
+  const rows = ranked
+    .filter((r) => !r.blocked)
+    .map((r) => ({ id: r.id, crops: r.crops, rule: r.total, isCurrent: r.isCurrent, stat: historicalCheck(pool.find((s) => s.id === r.id) || r, climate, farm, scenario) }))
+    .filter((r) => r.stat);
+  if (rows.length < 3) return null;
+  const statOrder = [...rows].sort((a, b) => b.stat.score - a.stat.score);
+  rows.forEach((r, i) => {
+    r.ruleRank = i + 1;
+    r.statRank = statOrder.indexOf(r) + 1;
+  });
+  return {
+    rows,
+    agreement: spearman(rows.map((r) => r.rule), rows.map((r) => r.stat.score)),
+    same_top: rows[0].id === statOrder[0].id,
+    stat_top: statOrder[0].id,
+  };
 }

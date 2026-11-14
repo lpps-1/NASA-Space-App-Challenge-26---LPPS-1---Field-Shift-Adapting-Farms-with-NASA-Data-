@@ -58,7 +58,57 @@ test("rain-fed farms block thirsty rotations", () => {
 });
 
 test("plan returns current + 3 alternatives with explanations", () => {
-  const plan = planRotations({ profile: { current_crops: ["Wheat"], crops: ["Cotton"], goals: ["water", "soil"], soil_type: "Loam", irrigation_methods: ["canal", "tubewell"] }, climate });
+  // ---- Satellite readings, machines, markets, statistical check (Nov 2026).
+const sat = {
+  groundwater: { value: -20, date: "2022-07-01" },
+  soil_moisture: { value: 0.3, date: "2026-11-10" },
+  land_cover: { class: 12, name: "cropland" },
+  ndvi_year: { peak: 0.7, low: 0.2, bare_months: [5, 6], months: Array.from({ length: 12 }, (_, i) => ({ month: i + 1, ndvi: 0.5 })) },
+};
+const irrigated = { irrigation_methods: ["canal", "tubewell"] };
+
+test("GRACE: falling groundwater costs thirsty rotations more water points", () => {
+  const score = (id, land) => scoreStrategy(STRATEGIES.find((s) => s.id === id), { climate, farm: { ...irrigated, land } });
+  const riceDrop = score("wheat-rice", {}).scores.water - score("wheat-rice", { sat }).scores.water;
+  const lentilDrop = score("lentil-sesame", {}).scores.water - score("lentil-sesame", { sat }).scores.water;
+  assert.ok(riceDrop > lentilDrop, `rice drop ${riceDrop} vs lentil ${lentilDrop}`);
+  assert.ok(score("wheat-rice", { sat }).sat_effects.some((e) => e.source === "GRACE groundwater"));
+});
+
+test("missing machine is a risk; no machines ticked skips the check", () => {
+  const s = STRATEGIES.find((x) => x.id === "wheat-cotton");
+  const none = scoreStrategy(s, { climate, farm: { ...irrigated } });
+  const lack = scoreStrategy(s, { climate, farm: { ...irrigated, equipment: ["tractor"] } });
+  assert.ok(lack.scores.risk < none.scores.risk);
+  assert.ok(lack.risks.some((r) => r.kind === "equipment"));
+});
+
+test("no sugar mill nearby lowers sugarcane income", () => {
+  const s = STRATEGIES.find((x) => x.id === "sugarcane");
+  const mill = scoreStrategy(s, { climate, farm: { ...irrigated, markets: ["sugar_mill"] } });
+  const noMill = scoreStrategy(s, { climate, farm: { ...irrigated, markets: ["mandi"] } });
+  assert.ok(noMill.margin_per_acre < mill.margin_per_acre);
+});
+
+test("satellite-observed bare months replace the calendar for the current rotation", () => {
+  const p = planRotations({ profile: { current_crops: ["Wheat", "Cotton"], ...irrigated }, climate, land: { sat } });
+  assert.deepEqual(p.current.bare_months, [5, 6]);
+});
+
+test("20-year statistical check ranks rotations and reports agreement", () => {
+  const yearly = Array.from({ length: 20 }, (_, i) => ({
+    year: 2006 + i,
+    month_rain_mm: RAIN.map((r) => Math.round(r * (0.6 + ((i * 7) % 9) / 10))),
+    month_tmax_c: TMAX.map((t) => t + (i % 4 === 0 ? 2 : 0)),
+  }));
+  const p = planRotations({ profile: { current_crops: ["Wheat", "Rice"], ...irrigated }, climate: { ...climate, yearly } });
+  assert.ok(p.statistical, "statistical comparison present");
+  assert.ok(p.statistical.rows.length >= 3);
+  assert.ok(p.statistical.agreement >= -1 && p.statistical.agreement <= 1);
+  assert.equal(planRotations({ profile: { current_crops: ["Wheat", "Rice"] }, climate }).statistical, null);
+});
+
+const plan = planRotations({ profile: { current_crops: ["Wheat"], crops: ["Cotton"], goals: ["water", "soil"], soil_type: "Loam", irrigation_methods: ["canal", "tubewell"] }, climate });
   assert.equal(plan.top.length, 4);
   assert.ok(plan.top[0].isCurrent);
   assert.equal(new Set(plan.top.map((s) => s.id)).size, 4);

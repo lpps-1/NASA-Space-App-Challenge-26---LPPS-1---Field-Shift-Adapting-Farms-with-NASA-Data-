@@ -28,7 +28,7 @@ export default function LanguageGate({ children }) {
                 <span className={l.code === "en" ? "text-lg font-semibold" : "urdu text-2xl leading-[1.9]"} dir={l.dir}>
                   {l.native}
                 </span>
-                <span className="text-sm text-muted-foreground">{l.code === "en" ? "" : l.label}</span>
+                <span className="text-sm text-muted-foreground">{l.code === "en" ? "انگریزی" : l.label}</span>
               </button>
             </li>
           ))}

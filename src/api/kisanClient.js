@@ -312,7 +312,8 @@ export const kisan = {
         qs.set("lng", profile.lng);
       } else return null;
       try {
-        const data = await getJson(`/api/climate?${qs}`);
+        // v=2: yearly entries carry month-by-month rain and heat (for the 20-year statistical check).
+        const data = await getJson(`/api/climate?${qs}&v=2`);
         return data?.monthly ? data : null;
       } catch {
         return null;
@@ -325,6 +326,28 @@ export const kisan = {
       try {
         const data = await getJson(`/api/terrain?lat=${profile.lat}&lng=${profile.lng}`);
         return data?.elevation_m != null ? data : null;
+      } catch {
+        return null;
+      }
+    },
+
+    /** Satellite readings at the farm (/api/satellite): NDVI, SMAP, IMERG, MODIS heat, GRACE, land cover. Null when unavailable. */
+    async getSatellite(profile) {
+      if (!Number.isFinite(profile?.lat) || !Number.isFinite(profile?.lng)) return null;
+      try {
+        const data = await getJson(`/api/satellite?lat=${profile.lat}&lng=${profile.lng}`);
+        return data?.point ? data : null;
+      } catch {
+        return null;
+      }
+    },
+
+    /** Slope of every ~150 m cell around the farm from NASA SRTM (/api/terrain?grid=1): erosion hotspots. */
+    async getSlopeGrid(profile) {
+      if (!Number.isFinite(profile?.lat) || !Number.isFinite(profile?.lng)) return null;
+      try {
+        const data = await getJson(`/api/terrain?lat=${profile.lat}&lng=${profile.lng}&grid=1`);
+        return data?.cells?.length ? data : null;
       } catch {
         return null;
       }

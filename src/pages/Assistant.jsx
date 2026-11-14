@@ -35,6 +35,8 @@ import {
   useProfile,
   useSettings,
   useSoilSurvey,
+  useSatellite,
+  useSlopeGrid,
   useTerrain,
   useUpdateSettings,
 } from "@/hooks/useKisanData";
@@ -292,6 +294,7 @@ export default function Assistant() {
   speakingIdxRef.current = speakingIdx;
 
   const voiceLang = settings?.voice_language || "auto";
+  tRef.voiceLang = voiceLang;
   voiceLangRef.current = voiceLang;
   const listenMode = LISTEN_MODES[settings?.listen_mode] ? settings.listen_mode : "patient";
   listenRef.current = { mode: listenMode, bargeIn: settings?.barge_in !== false };
@@ -383,7 +386,9 @@ export default function Assistant() {
   const { data: nasa } = useNasa();
   const { data: terrain } = useTerrain();
   const { data: usda } = useSoilSurvey();
-  const siteData = useMemo(() => buildSiteData({ profile, climate, nasa, terrain, usda }), [profile, climate, nasa, terrain, usda]);
+  const { data: sat } = useSatellite();
+  const { data: slopeGrid } = useSlopeGrid();
+  const siteData = useMemo(() => buildSiteData({ profile, climate, nasa, terrain, usda, sat, slopeGrid }), [profile, climate, nasa, terrain, usda, sat, slopeGrid]);
 
   const context = useMemo(() => {
     // Identity fields (email, account id) never go to the AI; the display name does.
@@ -464,7 +469,8 @@ export default function Assistant() {
           messages: apiMessages,
           ...context,
           voice: fromVoice,
-          appLang: tRef.uiLang,
+          // Punjabi picked as the app language or as the language the farmer speaks: reply in Punjabi.
+          appLang: String(tRef.voiceLang).startsWith("pa") ? "pa" : tRef.uiLang,
           signal: ctrl.signal,
           onLanguage: (code) => {
             if (code) replyLang = code;
@@ -1012,7 +1018,7 @@ export default function Assistant() {
                     <Languages className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                     {(() => {
                       const cur = VOICE_LANGS.find((l) => l.value === voiceLang) || VOICE_LANGS.find((l) => voiceLang.startsWith("pa") && l.value === "pa-PK") || VOICE_LANGS[0];
-                      return uiLang === "en" ? cur.label : cur.native;
+                      return cur.native === cur.label ? cur.label : `${cur.native} · ${cur.label}`;
                     })()}
                     <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   </LangMenu.Trigger>
@@ -1025,7 +1031,10 @@ export default function Assistant() {
                           onSelect={() => setVoiceLanguage(l.value)}
                           className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-2.5 py-2 text-sm outline-none data-[highlighted]:bg-secondary"
                         >
-                          {uiLang === "en" ? l.label : l.native}
+                          <span className="flex items-baseline gap-2">
+                            <span>{l.native}</span>
+                            {l.native !== l.label && <span className="text-xs text-muted-foreground">{l.label}</span>}
+                          </span>
                           {l.value === voiceLang && <Check className="h-4 w-4 text-primary" aria-hidden="true" />}
                         </LangMenu.Item>
                       ))}
