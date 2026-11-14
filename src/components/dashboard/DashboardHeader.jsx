@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarDays, MessagesSquare, Mic } from "lucide-react";
 import DistrictSwitcher from "@/components/dashboard/DistrictSwitcher";
+import CountryGlobe from "@/components/dashboard/CountryGlobe";
 import { greetingName } from "@/lib/profile";
 import { useT } from "@/i18n";
 
@@ -27,14 +28,19 @@ export default function DashboardHeader({ profile }) {
         <DistrictSwitcher profile={profile} />
       </div>
 
-      <h1 className="relative mt-4 font-display text-[26px] leading-tight sm:text-[32px]">
-        <span dir="auto">{greeting}</span>
-        <span>{lang === "en" ? "," : "،"}</span>{" "}
-        <span dir="auto" data-testid="greeting-name">{name}</span>
-      </h1>
-      <p className="relative mt-2 max-w-xl text-sm leading-relaxed text-white/70">
-        {t("Your weather, crops and next jobs in one place. Ask Kisan AI about your crops, soil, water and livestock, typed or spoken.")}
-      </p>
+      <div className="relative mt-4 flex items-center justify-between gap-4 sm:gap-8">
+        <div className="min-w-0">
+          <h1 className="font-display text-[26px] leading-tight sm:text-[32px]">
+            <span dir="auto">{greeting}</span>
+            <span>{lang === "en" ? "," : "،"}</span>{" "}
+            <span dir="auto" data-testid="greeting-name">{name}</span>
+          </h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/70">
+            {t("Your weather, crops and next jobs in one place. Ask Kisan AI about your crops, soil, water and livestock, typed or spoken.")}
+          </p>
+        </div>
+        <CountryGlobe country={profile?.country} />
+      </div>
 
       <div className="relative mt-6 flex flex-wrap gap-2.5">
         <Link to="/" className="kisan-btn-gold focus-ring">

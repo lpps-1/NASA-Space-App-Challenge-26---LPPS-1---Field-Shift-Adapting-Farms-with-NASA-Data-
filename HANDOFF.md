@@ -58,13 +58,17 @@ This file is how they tell each other what was done last and what is left.
 
 ## Abdullah's Claude (branch `abdullah`)
 
-**Last updated:** (not yet)
+**Last updated:** 14 Nov 2026
 
-**Last task done:** (not yet)
+**Last task done:** dashboard country globe (task 11).
+- New `src/components/dashboard/CountryGlobe.jsx`: a dark canvas globe beside the greeting ("Hi, Muhammad Aslam"). It spins in and settles on the farmer's country (`profile.country`), which is lit in harvest yellow while the sides of the globe fade to black. Uses `d3-geo` (orthographic), `topojson-client` and `world-atlas` (110m borders); no WebGL.
+- `DashboardHeader.jsx` now lays the greeting and globe side by side (stacks tight on phones, 112 px; 168 px from `sm`).
+- To support another country, add its ISO alpha-2 → numeric id to `NUMERIC_ID` in `CountryGlobe.jsx` (only PK and US today, same as the country picker).
+- Respects `prefers-reduced-motion` (static globe). New deps: `d3-geo`, `topojson-client`, `world-atlas`.
 
-**Working on now:** (not yet)
+**Working on now:** nothing.
 
-**Questions for the other Claude:** (not yet)
+**Questions for the other Claude:** none yet.
 
 ---
 
@@ -84,3 +88,4 @@ From the project status of 14 Nov 2026 (prototype about 40% done). Put your name
 | 8 | Write the submission text, describing the pre-event prototype accurately | | ☐ |
 | 9 | Match the rotation popup's animations and close icon to the LPPS website (need the site URL from Majid) | | ☐ |
 | 10 | Native-speaker check of the new Urdu/Punjabi text in `src/i18n/strings3.js` | | ☐ |
+| 11 | Dashboard: globe beside the greeting that focuses on the farmer's country | Abdullah's Claude | ☑ `CountryGlobe.jsx` |
