@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowRight, Check, ChevronDown, CloudRain, Droplets, Info, Landmark, Layers, MessagesSquare, Satellite, ShieldAlert, Sprout, Thermometer, Trophy, Wheat } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import InfoTip from "@/components/InfoTip";
 
 // The map library is large, so it loads only when the map is shown.
 const FarmMap = lazy(() => import("@/components/FarmMap"));
@@ -24,11 +25,11 @@ const PRIORITIES = [
   { key: "forage", label: "Fodder for animals", icon: Sprout },
 ];
 const ROWS = [
-  { key: "water", label: "Water saving", icon: Droplets },
-  { key: "soil", label: "Soil health", icon: Layers },
-  { key: "income", label: "Income", icon: Wheat },
-  { key: "risk", label: "Weather safety", icon: ShieldAlert },
-  { key: "forage", label: "Fodder", icon: Sprout },
+  { key: "water", label: "Water saving", icon: Droplets, info: "How little irrigation water the crops need over the year, after counting the rain NASA has recorded for your area. A higher score means more water saved." },
+  { key: "soil", label: "Soil health", icon: Layers, info: "How well the crops look after the soil: nitrogen-fixing crops, plant residue that feeds the soil, ground that stays covered, and little erosion on sloping land." },
+  { key: "income", label: "Income", icon: Wheat, info: "Typical net income per acre for these crops, shown as a relative figure. It does not use today's market prices, so check prices before you decide." },
+  { key: "risk", label: "Weather safety", icon: ShieldAlert, info: "How safe the crops are from heat, frost, drought, salty or waterlogged soil and very heavy rain. A higher score means fewer things that could go wrong." },
+  { key: "forage", label: "Fodder", icon: Sprout, info: "How much feed the rotation gives for your animals. It only appears when livestock is one of your goals." },
 ];
 const LEVELS = ["Ignore", "Low", "Medium", "High"];
 const tone = (v) => (v >= 70 ? "bg-field" : v >= 45 ? "bg-harvest" : "bg-alert");
@@ -162,7 +163,20 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
     <section className="kisan-card overflow-hidden p-0" data-testid="compare-table" aria-labelledby="compare-title">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-4 sm:px-6">
         <div>
-          <h2 id="compare-title" className="font-display text-lg">{t("Side by side")}</h2>
+          <div className="flex items-center gap-2">
+            <h2 id="compare-title" className="font-display text-lg">{t("Side by side")}</h2>
+            <InfoTip label={t("How to read this table")}>
+              <p className="font-semibold">{t("What is this table?")}</p>
+              <p className="mt-1 text-muted-foreground">{t("It puts the rotation you grow now next to the best options for your farm, so you can see what would change. Every score is out of 100 and higher is better.")}</p>
+              <ul className="mt-3 space-y-2">
+                <li className="flex items-center gap-2.5"><span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground"><Check className="h-3 w-3" aria-hidden="true" />94</span><span>{t("The best value in that row.")}</span></li>
+                <li className="flex items-center gap-2.5"><span className="inline-flex w-[3.25rem] shrink-0 justify-center gap-1 text-xs font-semibold"><span className={GOOD}>+5</span><span className="text-alert">−5</span></span><span>{t("How much better (green) or worse (red) it is than what you grow now.")}</span></li>
+                <li className="flex items-center gap-2.5"><span className="h-4 w-[3.25rem] shrink-0 rounded-sm border border-harvest/60 bg-harvest/20" /><span>{t("The highlighted column is the one explained in detail below the table.")}</span></li>
+              </ul>
+              <p className="mt-3 text-muted-foreground">{t("Irrigation and bare months work the other way round: lower is better.")}</p>
+              <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">{t("Scores come from NASA climate data, your soil and water, and typical crop figures. Use them to start a talk with your agriculture extension officer, not as a promise.")}</p>
+            </InfoTip>
+          </div>
           <p className="mt-0.5 text-xs text-muted-foreground">{t("Higher scores are better. Tap a column to open its details below.")}</p>
           <p className="mt-1 text-xs font-medium text-harvest sm:hidden">{t("Swipe sideways to see every option.")}</p>
         </div>
@@ -206,7 +220,11 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
               return (
                 <tr key={r.key} className="border-t border-border">
                   <th scope="row" className={cn(label, "text-muted-foreground")}>
-                    <span className="flex items-center gap-2.5"><r.icon className="h-4 w-4 shrink-0" aria-hidden="true" />{t(r.label)}</span>
+                    <span className="flex items-center gap-2.5">
+                      <r.icon className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />
+                      <span className="min-w-0">{t(r.label)}</span>
+                      <InfoTip label={`${t("What does this mean?")} ${t(r.label)}`} className="ms-auto">{t(r.info)}</InfoTip>
+                    </span>
                   </th>
                   {cols.map((s, i) => {
                     const v = s.scores[r.key];
@@ -226,13 +244,18 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
               );
             })}
             {[
-              { key: "irrigation", label: "Irrigation a year", get: (s) => s.irrigation_mm, show: (v) => `${v.toLocaleString()} mm`, unit: "", min: 30 },
-              { key: "bare", label: "Months the field is bare", get: (s) => s.bare_months.length, show: (v) => String(v), unit: "", min: 1 },
+              { key: "irrigation", label: "Irrigation a year", info: "How much water the whole rotation needs from canals, tube wells or other irrigation, in millimetres a year. It is the gap between what the crops need and the rain NASA has recorded. Lower is better.", get: (s) => s.irrigation_mm, show: (v) => `${v.toLocaleString()} mm`, unit: "", min: 30 },
+              { key: "bare", label: "Months the field is bare", info: "Months of the year when nothing is growing in the field. Bare soil dries out, can wash away and grows weeds, so fewer is better.", get: (s) => s.bare_months.length, show: (v) => String(v), unit: "", min: 1 },
             ].map((m) => {
               const win = winners(cols.map(m.get), true);
               return (
                 <tr key={m.key} className="border-t border-border">
-                  <th scope="row" className={cn(label, "text-muted-foreground")}>{t(m.label)}<span className="mt-0.5 block text-[11px] font-normal opacity-70">{t("Lower is better")}</span></th>
+                  <th scope="row" className={cn(label, "text-muted-foreground")}>
+                    <span className="flex items-center gap-2.5">
+                      <span className="min-w-0">{t(m.label)}<span className="mt-0.5 block text-[11px] font-normal opacity-70">{t("Lower is better")}</span></span>
+                      <InfoTip label={`${t("What does this mean?")} ${t(m.label)}`} className="ms-auto">{t(m.info)}</InfoTip>
+                    </span>
+                  </th>
                   {cols.map((s, i) => {
                     const diff = m.get(s) - m.get(cur);
                     return (
@@ -248,7 +271,12 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
               );
             })}
             <tr className="border-t border-border">
-              <th scope="row" className={cn(label, "align-top text-muted-foreground")}>{t("Field calendar")}</th>
+              <th scope="row" className={cn(label, "align-top text-muted-foreground")}>
+                <span className="flex items-center gap-2.5">
+                  <span className="min-w-0">{t("Field calendar")}</span>
+                  <InfoTip label={`${t("What does this mean?")} ${t("Field calendar")}`} className="ms-auto">{t("One year in twelve boxes. Each colour is a crop growing in the field that month. A dashed red box means the field is bare.")}</InfoTip>
+                </span>
+              </th>
               {cols.map((s) => {
                 const on = selected === s.id;
                 return (
