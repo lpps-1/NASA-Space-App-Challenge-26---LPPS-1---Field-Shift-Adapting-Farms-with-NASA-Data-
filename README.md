@@ -1,5 +1,9 @@
 # Pakistan Kisan AI
 
+> **NASA Space Apps Challenge 2026 · Team LPPS-1 (Lahore) · Field Shift: Adapting Farms with NASA Data**
+>
+> **Note on how this code was uploaded:** we built this prototype before the event and worked offline, because our internet connection is very poor. Uploading everything at once kept failing, so we pushed the history to GitHub in several smaller pushes. The commits labelled "Prototype part N/11 (pre-event)" are the prototype split into 11 parts in build order. Their dates show when the history was put together, not when each part was written. Work done during the hackathon is added after them as normal commits.
+
 A farming companion for Pakistani farmers. It has a dashboard with weather, fields and upcoming work. It also has a voice-enabled, agriculture-only AI assistant that answers farming questions in Urdu, Punjabi or English (and politely declines anything unrelated to farming), a farm calendar, farm calculators, a farmer profile, and an admin knowledge base.
 
 The app was originally built on Base44. It now runs fully independently, with no Base44 account, SDK, API key or hosted service involved.
