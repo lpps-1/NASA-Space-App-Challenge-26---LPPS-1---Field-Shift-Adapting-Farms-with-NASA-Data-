@@ -3,6 +3,7 @@ import { gemini } from "../lib/gemini.mjs";
 import { buildSystemPrompt, languageDirective } from "../lib/prompt.mjs";
 import { replyLanguage } from "../../src/lib/language.js";
 import { getWeather, weatherTool } from "../lib/weather.mjs";
+import { evidenceBlock, farmEvidence } from "../lib/farmData.mjs";
 
 /**
  * POST /api/assistant
@@ -243,7 +244,11 @@ export default async (req) => {
   // The app is set to Urdu or Punjabi but the message is English (e.g. a question the app wrote for a
   // dashboard button): answer in the app's language. Roman Urdu and Urdu messages are untouched.
   if (lang?.code === "en" && (ctx.appLang === "ur" || ctx.appLang === "pa")) lang = { ...lang, code: ctx.appLang, source: "app" };
-  const directive = languageDirective(lang, { voice: ctx.voice });
+  // Ground the answer in the farm's NASA and government data (fetched now, in parallel, with short limits).
+  const evidence = await farmEvidence(ctx.profile).catch(() => null);
+  const directive = `${evidenceBlock(evidence)}
+
+${languageDirective(lang, { voice: ctx.voice })}`;
 
   const encoder = new TextEncoder();
   const abort = new AbortController();

@@ -111,4 +111,11 @@ export const R3 = {
   "Display name": ["ظاہر ہونے والا نام", "وکھائی دین والا ناں"],
   "Optional. Only kept in this browser.": ["اختیاری۔ صرف اسی براؤزر میں محفوظ رہتا ہے۔"],
   "Saved": ["محفوظ ہو گیا", "سانبھ لیا"],
+  "Online Urdu voice (Gemini)": ["آن لائن اردو آواز (جیمنائی)"],
+  "A more natural Pakistani Urdu voice on computers without one. The free Gemini plan allows only a few answers a day, and every clip is checked before it plays, so answers start a few seconds later.": ["ان کمپیوٹرز پر زیادہ قدرتی پاکستانی اردو آواز جن میں اردو آواز نہیں۔ جیمنائی کے مفت پلان پر روزانہ چند جواب ہی ممکن ہیں، اور ہر کلپ چلنے سے پہلے جانچا جاتا ہے، اس لیے جواب چند سیکنڈ دیر سے شروع ہوتا ہے۔"],
+  "Kisan AI speaks Urdu with the online Gemini voice, and with this device's voice when that isn't available.": ["کسان AI آن لائن جیمنائی آواز میں اردو بولتا ہے، اور جب وہ دستیاب نہ ہو تو اس ڈیوائس کی آواز میں۔"],
+  "This device has no Urdu voice, so a Hindi voice reads the Urdu words. Microsoft Edge has natural Pakistani Urdu voices built in.": ["اس ڈیوائس میں اردو آواز نہیں، اس لیے ہندی آواز اردو الفاظ پڑھتی ہے۔ مائیکروسافٹ ایج میں قدرتی پاکستانی اردو آوازیں موجود ہیں۔"],
+  "This device has no Urdu or Hindi voice. Use Microsoft Edge, or switch on the online Urdu voice below.": ["اس ڈیوائس میں اردو یا ہندی آواز نہیں۔ مائیکروسافٹ ایج استعمال کریں، یا نیچے آن لائن اردو آواز آن کریں۔"],
+  "Automatic (best voice on this device)": ["خودکار (اس ڈیوائس کی بہترین آواز)"],
+  "This device has no Urdu voice. Open Kisan AI in Microsoft Edge for a natural Urdu voice, or turn on the online Urdu voice in Settings → Voice assistant.": ["اس ڈیوائس میں اردو آواز نہیں۔ قدرتی اردو آواز کے لیے کسان AI کو مائیکروسافٹ ایج میں کھولیں، یا سیٹنگز ← وائس اسسٹنٹ میں آن لائن اردو آواز آن کریں۔"],
 };

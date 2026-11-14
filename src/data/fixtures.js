@@ -180,6 +180,7 @@ export const DEFAULT_SETTINGS = {
   voice_language: "auto", // "auto" | "ur-PK" | "pa-PK" | "en-PK"
   tts_voice: "", // voiceURI chosen in Settings; "" = pick the best Urdu voice automatically
   speech_rate: 1,
+  cloud_urdu_voice: false, // online Gemini Urdu voice: opt-in, free keys get ~10 clips a day per model
   listen_mode: "patient", // "auto" (short pause ends the turn) | "patient" | "manual" (listen until the farmer taps stop)
   barge_in: true, // conversation mode: talking over Kisan AI interrupts it
   weather_alerts: true,

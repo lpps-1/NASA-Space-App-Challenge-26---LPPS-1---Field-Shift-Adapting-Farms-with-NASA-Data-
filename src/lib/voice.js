@@ -637,6 +637,7 @@ function audioEl() {
 /** True when an Urdu-family reply should use the cloud voice on this device. */
 function wantsCloud(lang, opts, synthesize) {
   if (!synthesize || !CLOUD_LANGS.has(lang)) return false;
+  if (!opts.cloudVoice) return false; // the online Gemini voice is opt-in (Settings → Voice assistant)
   if (opts.voiceURI) return false; // a voice chosen in Settings always wins
   return urduVoicePlan().mode !== "native";
 }
@@ -655,7 +656,7 @@ let lastCloudReason = null;
  * answer stays as text (the page tells the farmer why).
  */
 async function planCloud(text, hint, opts, prepare, synthesize) {
-  if (Date.now() < cloudOffUntil) return { mode: "skip", text, reason: lastCloudReason || "unavailable" };
+  if (Date.now() < cloudOffUntil) return devicePlan(text, hint, opts, prepare, lastCloudReason || "unavailable");
   let src = text;
   if (hint === "ur-Latn" && prepare && !hasArabicScript(text)) {
     src = await cachedPrepare(prepare, text, "ur").catch(() => text);
@@ -673,7 +674,22 @@ async function planCloud(text, hint, opts, prepare, synthesize) {
     }
   }
   if (lastCloudReason === "quota" || lastCloudReason === "key") noteCloudFailure({ status: lastCloudReason === "quota" ? 429 : 503 });
-  return { mode: "skip", text, reason: lastCloudReason };
+  return devicePlan(text, hint, opts, prepare, lastCloudReason);
+}
+
+/** The cloud voice is unavailable: plan the text for the device's voices, in short pieces. */
+async function devicePlan(text, hint, opts, prepare, reason) {
+  const parts = text
+    .split("\n")
+    .flatMap((line) => {
+      const [sentences, rest] = takeSentences(line + " ");
+      return rest.trim() ? [...sentences, rest.trim()] : sentences;
+    })
+    .flatMap(split);
+  const pieces = await Promise.all(parts.map((t) => planPiece(t, hint, { ...opts, noCloud: true }, prepare)));
+  // Nothing on this device can say it: keep the answer as text and tell the page why.
+  if (!pieces.some((x) => x.text?.trim())) return { mode: "skip", text, reason, pieces };
+  return { mode: "expand", text, reason, pieces };
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -838,7 +854,7 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
     let chunk = cloudBuf;
     if (!all) {
       // Cut at the last sentence end that keeps the chunk within ~320 characters.
-      const limit = cloudChunks === 0 ? 140 : 320;
+      const limit = cloudChunks === 0 ? 220 : 1200;
       const ends = [...cloudBuf.matchAll(/[۔.!?؟]\s+|\n/g)].map((m) => m.index + m[0].length).filter((i) => i <= limit);
       const cut = ends.length ? ends[ends.length - 1] : cloudBuf.length > limit ? cloudBuf.lastIndexOf(" ", limit) : -1;
       if (cut <= 0) return;
@@ -851,7 +867,7 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
       planCloud(chunk.trim(), cloudLang, opts, prepare, synthesize).then((p) => {
         if (p.mode === "cloud") urls.add(p.url);
         else
-          for (const piece of p.pieces) {
+          for (const piece of p.pieces || []) {
             if (piece.mode === "hindi" || piece.mode === "none") warn(cloudLang || scriptLang(piece.text), piece.mode);
             if (piece.mode === "none") stats.missing = cloudLang || scriptLang(piece.text);
           }

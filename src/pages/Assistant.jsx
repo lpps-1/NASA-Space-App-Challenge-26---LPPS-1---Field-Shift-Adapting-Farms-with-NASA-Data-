@@ -283,7 +283,7 @@ export default function Assistant() {
   const listenMode = LISTEN_MODES[settings?.listen_mode] ? settings.listen_mode : "patient";
   listenRef.current = { mode: listenMode, bargeIn: settings?.barge_in !== false };
   const ttsOptionsRef = useRef({});
-  ttsOptionsRef.current = { voiceURI: settings?.tts_voice || "", rate: settings?.speech_rate || 1 };
+  ttsOptionsRef.current = { voiceURI: settings?.tts_voice || "", rate: settings?.speech_rate || 1, cloudVoice: settings?.cloud_urdu_voice === true };
   const caps = useSpeechCaps(settings?.tts_voice || "");
 
   const speaker = useMemo(
@@ -888,7 +888,7 @@ export default function Assistant() {
               {voiceNotice.kind === "blocked" ? (
                 <span className="flex-1">{t("The browser blocked automatic speech. Tap play to hear the answer. It will play by itself after that.")}</span>
               ) : (
-                <span className="flex-1">{t("This device has no Urdu voice, so the answer is shown as text only.")}</span>
+                <span className="flex-1">{t("This device has no Urdu voice. Open Kisan AI in Microsoft Edge for a natural Urdu voice, or turn on the online Urdu voice in Settings → Voice assistant.")}</span>
               )}
               {voiceNotice.kind === "blocked" && voiceNotice.idx != null && (
                 <button onClick={() => speakMessage(voiceNotice.idx)} className="kisan-btn-gold px-3 py-1.5 text-xs focus-ring">

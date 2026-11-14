@@ -35,7 +35,17 @@ This file is how they tell each other what was done last and what is left.
 
 **Branch rule (from Majid):** `majid` is the master branch, `abdullah` is the slave. Majid's Claude merges Abdullah's new commits into `majid` (majid wins any conflict), then pushes `majid` and `main`. **Abdullah's Claude: please `git pull origin main` before starting work.** Your branch is behind main, so a deploy from `abdullah` looks like Majid's chat changes were reverted.
 
-**Last task done:** fifth round (14 Nov ~20:00):
+**Last task done:** sixth round (14 Nov ~21:00): speech and grounded answers
+- **Answers use the app's data, not general knowledge.** New `server/lib/farmData.mjs`: before each chat answer the server fetches, in parallel with short limits (~3 s total), NASA POWER last 30 days, NASA POWER 20-year climate, NASA SRTM terrain, and the government soil survey (USDA live for US farms, Soil Survey of Pakistan / WAPDA province background). It goes into the per-turn instructions as a "Farm data" block; the prompt ("Data first" in `server/lib/prompt.mjs`) tells Gemini to answer from those numbers, name the source, and never invent local figures. Tested: "Based on NASA's 20-year climate data (2006–2025) for Faisalabad: about 505 mm rain a year… 93–94 days above 40 °C".
+- **Urdu speech bugs fixed:**
+  - The speech request started with "Say this in a warm, clear Pakistani Urdu voice…", which Gemini sometimes read aloud (plus a noise burst). With no cue it invents its own sentence; "Say in Urdu:" made it talk *to* Urdu. Now: a quoted cue, and **every clip is transcribed and compared with the text before it plays** (`saysText` in `server/functions/tts.mjs`); a mismatch retries once with another wording, then fails, so the wrong words never play.
+  - Free Gemini keys get **10 speech requests per day per speech model**. On a daily limit the server now rests that model and tries the next one. The browser sends bigger chunks (220 then 1,200 characters), so one answer is 1–2 requests, not 4–6. Results are cached.
+  - **Crash fixed** in `src/lib/voice.js`: when the cloud voice failed, the queue read `p.pieces` of a plan that had none and stopped speaking for the rest of the session ("Speak aloud is bugging").
+  - When the cloud voice fails, Urdu now falls back to the device's own voice (a native Urdu voice, or a Hindi voice reading the Urdu words) instead of going silent.
+- **The online Gemini Urdu voice is now opt-in**: Settings → Voice assistant → "Online Urdu voice (Gemini)" (`cloud_urdu_voice`, default off). By default replies use the device's voice: Microsoft Edge has natural Pakistani Urdu voices; Chrome on Windows uses a Hindi voice for Urdu words.
+- Punjabi (Shahmukhi) replies use the same path; not tested yet.
+
+**Before that:** fifth round (14 Nov ~20:00):
 - **Season clock removed** (`SeasonClock.jsx` and its CSS deleted). Dashboard order is now: hero → rotation summary → weather (3/5) beside rain chances + jobs (2/5) → **Crops & fields full width** → farm plan + NASA data → recommendations → recent chats. No empty corner.
 - **Field cards overflowed** at wide screens (text ran into the next card): each card is now `grid-cols-1 min-w-0` inside the subgrid, so long text truncates/wraps inside its own card.
 - **Map** (`FarmMap.jsx`): CARTO tiles showed "API KEY REQUIRED" on the live site, so the background is now NASA GIBS (Blue Marble relief in light mode, VIIRS Black Marble in dark mode) plus NASA place labels. Countries outside Pakistan/US are a near-solid grey (opacity 0.94), so data layers only show inside the two covered countries. Privacy/Terms no longer mention CARTO.
