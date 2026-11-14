@@ -10,7 +10,7 @@ Commit hashes below are from the `abdullah` branch.
 
 ## 14 Nov 2026
 
-### Google sign-in that works on Vercel (this commit)
+### Google sign-in that works on Vercel: `e6620c7`
 - Before: the Google button needed Netlify Identity, which does not exist on Vercel (`/.netlify/identity/settings` on kisaaaaan.vercel.app just returns the home page), so the button was hidden.
 - `src/lib/googleSignIn.js` (new): Google Identity Services popup (`accounts.google.com/gsi/client`, scopes `openid email profile`) gives a short-lived token; `verifyGoogle` sends it to the server. Closing the popup is not an error.
 - `server/functions/auth-google.mjs` (new) + `api/auth-google.js` (Vercel entry): `POST /api/auth-google {access_token}` checks the token with Google (tokeninfo: issued to our client, not expired; userinfo: verified email) and returns `{ id: "g_<google id>", email, name, picture }`. The token is not stored.
