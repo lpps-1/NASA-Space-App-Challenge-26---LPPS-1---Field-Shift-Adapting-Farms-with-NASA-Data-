@@ -1,8 +1,9 @@
 import { lazy, Suspense, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowRight, Check, ChevronDown, CloudRain, Droplets, Info, Landmark, Layers, MessagesSquare, Satellite, ShieldAlert, Sprout, Thermometer, Trophy, Wheat } from "lucide-react";
+import { ArrowRight, CalendarDays, CalendarX, Check, ChevronDown, CloudRain, Droplets, Info, Landmark, Layers, MessagesSquare, Satellite, ShieldAlert, Sprout, Thermometer, Trophy, Waves, Wheat } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import InfoTip from "@/components/InfoTip";
 
 // The map library is large, so it loads only when the map is shown.
 const FarmMap = lazy(() => import("@/components/FarmMap"));
@@ -24,11 +25,11 @@ const PRIORITIES = [
   { key: "forage", label: "Fodder for animals", icon: Sprout },
 ];
 const ROWS = [
-  { key: "water", label: "Water saving", icon: Droplets },
-  { key: "soil", label: "Soil health", icon: Layers },
-  { key: "income", label: "Income", icon: Wheat },
-  { key: "risk", label: "Weather safety", icon: ShieldAlert },
-  { key: "forage", label: "Fodder", icon: Sprout },
+  { key: "water", label: "Water saving", icon: Droplets, info: "How little irrigation water the crops need over the year, after counting the rain NASA has recorded for your area. A higher score means more water saved." },
+  { key: "soil", label: "Soil health", icon: Layers, info: "How well the crops look after the soil: nitrogen-fixing crops, plant residue that feeds the soil, ground that stays covered, and little erosion on sloping land." },
+  { key: "income", label: "Income", icon: Wheat, info: "Typical net income per acre for these crops, shown as a relative figure. It does not use today's market prices, so check prices before you decide." },
+  { key: "risk", label: "Weather safety", icon: ShieldAlert, info: "How safe the crops are from heat, frost, drought, salty or waterlogged soil and very heavy rain. A higher score means fewer things that could go wrong." },
+  { key: "forage", label: "Fodder", icon: Sprout, info: "How much feed the rotation gives for your animals. It only appears when livestock is one of your goals." },
 ];
 const LEVELS = ["Ignore", "Low", "Medium", "High"];
 const tone = (v) => (v >= 70 ? "bg-field" : v >= 45 ? "bg-harvest" : "bg-alert");
@@ -143,6 +144,21 @@ function Value({ children, win }) {
   );
 }
 
+/** A row heading in the comparison table: topic icon, name, and an "i" that explains the measure. */
+function RowLabel({ icon: Icon, title, info, hint }) {
+  const { t } = useT();
+  return (
+    <span className="flex items-center gap-2.5">
+      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="min-w-0">
+        <span className="inline">{t(title)}</span>
+        {hint && <span className="mt-0.5 block text-[11px] font-normal opacity-70">{t(hint)}</span>}
+      </span>
+      <InfoTip label={`${t("What does this mean?")} ${t(title)}`}>{t(info)}</InfoTip>
+    </span>
+  );
+}
+
 /** Side-by-side table: the current rotation and the best options, one row per measure. */
 function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
   const { t } = useT();
@@ -176,7 +192,7 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] table-fixed border-collapse text-sm">
           <colgroup>
-            <col className="w-[7.25rem] sm:w-[10.5rem]" />
+            <col className="w-[9rem] sm:w-[11.5rem]" />
             {cols.map((s) => <col key={s.id} />)}
           </colgroup>
           <thead>
@@ -206,7 +222,7 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
               return (
                 <tr key={r.key} className="border-t border-border">
                   <th scope="row" className={cn(label, "text-muted-foreground")}>
-                    <span className="flex items-center gap-2.5"><r.icon className="h-4 w-4 shrink-0" aria-hidden="true" />{t(r.label)}</span>
+                    <RowLabel icon={r.icon} title={r.label} info={r.info} />
                   </th>
                   {cols.map((s, i) => {
                     const v = s.scores[r.key];
@@ -226,13 +242,15 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
               );
             })}
             {[
-              { key: "irrigation", label: "Irrigation a year", get: (s) => s.irrigation_mm, show: (v) => `${v.toLocaleString()} mm`, unit: "", min: 30 },
-              { key: "bare", label: "Months the field is bare", get: (s) => s.bare_months.length, show: (v) => String(v), unit: "", min: 1 },
+              { key: "irrigation", label: "Irrigation a year", icon: Waves, info: "How much water the whole rotation needs from canals, tube wells or other irrigation, in millimetres a year. It is the gap between what the crops need and the rain NASA has recorded. Lower is better.", get: (s) => s.irrigation_mm, show: (v) => `${v.toLocaleString()} mm`, unit: "", min: 30 },
+              { key: "bare", label: "Months the field is bare", icon: CalendarX, info: "Months of the year when nothing is growing in the field. Bare soil dries out, can wash away and grows weeds, so fewer is better.", get: (s) => s.bare_months.length, show: (v) => String(v), unit: "", min: 1 },
             ].map((m) => {
               const win = winners(cols.map(m.get), true);
               return (
                 <tr key={m.key} className="border-t border-border">
-                  <th scope="row" className={cn(label, "text-muted-foreground")}>{t(m.label)}<span className="mt-0.5 block text-[11px] font-normal opacity-70">{t("Lower is better")}</span></th>
+                  <th scope="row" className={cn(label, "text-muted-foreground")}>
+                    <RowLabel icon={m.icon} title={m.label} info={m.info} hint="Lower is better" />
+                  </th>
                   {cols.map((s, i) => {
                     const diff = m.get(s) - m.get(cur);
                     return (
@@ -248,7 +266,9 @@ function CompareTable({ plan, weights, lang, selected, onSelect, order }) {
               );
             })}
             <tr className="border-t border-border">
-              <th scope="row" className={cn(label, "align-top text-muted-foreground")}>{t("Field calendar")}</th>
+              <th scope="row" className={cn(label, "align-top text-muted-foreground")}>
+                <RowLabel icon={CalendarDays} title="Field calendar" info="One year in twelve boxes. Each colour is a crop growing in the field that month. A dashed red box means the field is bare." />
+              </th>
               {cols.map((s) => {
                 const on = selected === s.id;
                 return (

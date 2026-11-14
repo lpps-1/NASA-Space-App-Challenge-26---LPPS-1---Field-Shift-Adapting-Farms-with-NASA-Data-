@@ -30,13 +30,47 @@ function focusPoint(country) {
   return geoCentroid(biggest);
 }
 
+const TILT = (-24 * Math.PI) / 180; // slant of the satellite's orbit
+const ORBIT_SECONDS = 9;
+
+/** A small flat satellite: a body, two solar panels and an antenna. Drawn along the orbit. */
+function drawSatellite(ctx, x, y, u) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(TILT);
+  ctx.fillStyle = "#5b8fc7";
+  ctx.fillRect(-u * 3, -u * 0.5, u * 1.8, u);
+  ctx.fillRect(u * 1.2, -u * 0.5, u * 1.8, u);
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.lineWidth = Math.max(0.5, u * 0.12);
+  for (const sx of [-u * 2.1, u * 2.1]) {
+    ctx.beginPath();
+    ctx.moveTo(sx, -u * 0.5);
+    ctx.lineTo(sx, u * 0.5);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#e7ece9";
+  ctx.fillRect(-u * 1.1, -u * 0.75, u * 2.2, u * 1.5);
+  ctx.strokeStyle = "#e7ece9";
+  ctx.lineWidth = Math.max(0.6, u * 0.16);
+  ctx.beginPath();
+  ctx.moveTo(0, -u * 0.75);
+  ctx.lineTo(0, -u * 1.6);
+  ctx.stroke();
+  ctx.fillStyle = "#F2C94C";
+  ctx.beginPath();
+  ctx.arc(0, -u * 1.7, u * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 const finite = (n) => typeof n === "number" && Number.isFinite(n);
 
 /**
  * A dark globe that spins into view and turns slowly from side to side around the farmer's
  * region. The country is lit in harvest yellow, a pulsing marker with a flag on a pole
- * sits on the farm, and the sides of the globe fade to black. Pakistan and the US only.
+ * sits on the farm, a small satellite circles the globe, and the sides fade to black. Pakistan and the US only.
  */
 export default function CountryGlobe({ profile, className = "" }) {
   const { lang } = useT();
@@ -82,10 +116,27 @@ export default function CountryGlobe({ profile, className = "" }) {
     let started = 0;
 
     const draw = (rotation, now) => {
-      const r = size / 2 - 3;
+      const r = size * 0.335;
       const c = size / 2;
       projection.translate([c, c]).scale(r).rotate(rotation);
       ctx.clearRect(0, 0, size, size);
+
+      // Satellite orbit. Its far half and the satellite (when behind) are drawn first, so the globe covers them.
+      const rx = size * 0.46;
+      const ry = size * 0.15;
+      const theta = reduced ? 0.8 : ((now || 0) / 1000 / ORBIT_SECONDS) * Math.PI * 2 + 0.8;
+      const front = Math.sin(theta) > 0;
+      const sx = c + rx * Math.cos(theta) * Math.cos(TILT) - ry * Math.sin(theta) * Math.sin(TILT);
+      const sy = c + rx * Math.cos(theta) * Math.sin(TILT) + ry * Math.sin(theta) * Math.cos(TILT);
+      const orbit = (from, to, alpha) => {
+        ctx.beginPath();
+        ctx.ellipse(c, c, rx, ry, TILT, from, to);
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      };
+      orbit(Math.PI, Math.PI * 2, 0.14);
+      if (!front) drawSatellite(ctx, sx, sy, size * 0.027);
 
       // Ocean: deep green-black so the globe sits inside the hero.
       const ocean = ctx.createRadialGradient(c * 0.85, c * 0.8, r * 0.1, c, c, r);
@@ -142,6 +193,9 @@ export default function CountryGlobe({ profile, className = "" }) {
       ctx.strokeStyle = "rgba(120,220,170,0.28)";
       ctx.lineWidth = 1.2;
       ctx.stroke();
+
+      orbit(0, Math.PI, 0.32);
+      if (front) drawSatellite(ctx, sx, sy, size * 0.027);
 
       // Location marker: a dot with two ripples, and the flag pole on top of it.
       const xy = target.farm ? projection(target.farm) : null;
@@ -211,12 +265,12 @@ export default function CountryGlobe({ profile, className = "" }) {
 
   return (
     <figure className={`flex shrink-0 flex-col items-center gap-2 ${className}`} data-testid="country-globe">
-      <div ref={wrapRef} className="relative h-[120px] w-[120px] sm:h-[184px] sm:w-[184px] lg:h-[216px] lg:w-[216px]">
+      <div ref={wrapRef} className="relative h-[124px] w-[124px] sm:h-[148px] sm:w-[148px] lg:h-[168px] lg:w-[168px]">
         <canvas ref={canvasRef} role="img" aria-label={[region, countryName].filter(Boolean).join(", ")} />
         {/* A flag on a pole planted at the farm; the canvas moves it with the globe. */}
         <div ref={pinRef} className="pointer-events-none absolute left-0 top-0 h-0 w-0 opacity-0" aria-hidden="true">
-          <span className="absolute bottom-0 left-0 h-[24px] w-px -translate-x-1/2 bg-white/90" />
-          <Flag country={country} className="absolute bottom-[10px] left-0 h-[15px] w-[22px] rounded-[2px]" />
+          <span className="absolute bottom-0 left-0 h-[17px] w-px -translate-x-1/2 bg-white/90" />
+          <Flag country={country} className="absolute bottom-[7px] left-0 h-[10px] w-[15px] rounded-[1px]" />
         </div>
       </div>
       <figcaption className="flex flex-col items-center gap-0.5 text-center" dir="auto">
