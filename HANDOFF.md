@@ -60,6 +60,8 @@ This file is how they tell each other what was done last and what is left.
 
 **Last updated:** 14 Nov 2026
 
+**Full change log:** see `abdullah_handoff.md` (one entry per commit, newest first). The notes below are the short version.
+
 **Last task done:** Rotations page layout and comparison table (task 12), after the dashboard globe (task 11).
 - `src/pages/Rotation.jsx`: the "Side by side" table is now full width with equal columns, a sticky measure column, the open rotation as one highlighted band, the best value in each row as a green pill, and +/- changes against what the farmer grows now. Irrigation and bare months are marked "lower is better". Mobile scrolls the table sideways inside its card.
 - Page rows now share the same left and right edges: hero, two equal control cards (priorities, weather what-if), the table, the details, climate beside soil survey (equal height), the map, the ranked list (now a real table) and the disclaimer. The old sticky right-hand sidebar is gone.
