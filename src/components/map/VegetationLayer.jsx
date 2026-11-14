@@ -137,10 +137,10 @@ const VegGrid = L.GridLayer.extend({
   },
 });
 
-export default function VegetationLayer({ opacity = 1 }) {
+export default function VegetationLayer({ opacity = 1, zIndex = 300 }) {
   const map = useMap();
   useEffect(() => {
-    const layer = new VegGrid({ opacity, maxZoom: 19, attribution: "NASA GIBS: MODIS land cover + MODIS NDVI", className: "kisan-data-tiles", zIndex: 300 });
+    const layer = new VegGrid({ opacity, maxZoom: 19, attribution: "NASA GIBS: MODIS land cover + MODIS NDVI", className: "kisan-data-tiles", zIndex });
     layer.addTo(map);
     return () => layer.remove();
   }, [map]); // opacity is updated by the effect below without rebuilding the tiles

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, GeoJSON, MapContainer, Polygon, Rectangle, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Globe2, LocateFixed, Mountain, Satellite, TriangleAlert } from "lucide-react";
+import { Check, Globe2, LocateFixed, Mountain, Plus, Satellite, TriangleAlert, X } from "lucide-react";
 import { useProfile, useSlopeGrid, useTerrain } from "@/hooks/useKisanData";
 import VegetationLayer from "@/components/map/VegetationLayer";
 import { useT } from "@/i18n";
@@ -14,7 +14,8 @@ import Flag from "@/components/Flag";
 /**
  * The farm on a map with NASA satellite layers on top, from NASA GIBS
  * (Global Imagery Browse Services; open, no key). Each layer shows the most
- * recent image NASA has published. One layer at a time, with an opacity slider.
+ * recent image NASA has published. Each layer chip turns its layer on or off; several can be on
+ * at once (stacked, the 30 m image at the bottom), with one opacity slider for all.
  */
 const GIBS = (layer, matrix) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/default/${matrix}/{z}/{y}/{x}.png`;
 
@@ -120,15 +121,39 @@ const SLOPE_TEXT = {
   steep: "Steep slope",
 };
 
+// Stacking order when several layers are on: the opaque 30 m image at the bottom, vegetation on top.
+const STACK = ["landsat", "grace", "heat", "rain", "smap", "ndvi"];
+const LAYERS_KEY = "kisan-map-layers";
+function savedLayers() {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAYERS_KEY));
+    if (Array.isArray(v)) return v.filter((id) => NASA_LAYERS.some((l) => l.id === id));
+  } catch {
+    /* storage blocked: use the default */
+  }
+  return ["ndvi"];
+}
+function saveLayers(ids) {
+  try {
+    localStorage.setItem(LAYERS_KEY, JSON.stringify(ids));
+  } catch {
+    /* not saved: fine */
+  }
+}
+
 export default function FarmMap({ className }) {
   const { t } = useT();
   const { data: profile } = useProfile();
   const { data: terrain } = useTerrain();
   const { data: slopeGrid } = useSlopeGrid();
   const [hotspots, setHotspots] = useState(false);
-  const [layerId, setLayerId] = useState("ndvi");
+  const [layerIds, setLayerIds] = useState(savedLayers);
   const [opacity, setOpacity] = useState(0.75);
-  const layer = NASA_LAYERS.find((l) => l.id === layerId);
+  const active = NASA_LAYERS.filter((l) => layerIds.includes(l.id)); // chip order, for the legend
+  useEffect(() => saveLayers(layerIds), [layerIds]);
+  // on: true = turn on, false = turn off, undefined = flip.
+  const toggleLayer = (id, on) =>
+    setLayerIds((ids) => ((on ?? !ids.includes(id)) ? [...new Set([...ids, id])] : ids.filter((x) => x !== id)));
   const hasPoint = Number.isFinite(profile?.lat) && Number.isFinite(profile?.lng);
   const { theme } = useTheme();
   const [target, setTarget] = useState(null);
@@ -156,24 +181,32 @@ export default function FarmMap({ className }) {
           </p>
         )}
       </div>
-      <p className="mt-1 text-sm text-muted-foreground">{t("Latest NASA satellite maps around your farm. Pick a layer.")}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t("Latest NASA satellite maps around your farm. Tap a layer to turn it on or off; several can be on together.")}</p>
 
-      <div className="mt-4 flex flex-wrap gap-1.5" role="radiogroup" aria-label={t("Map layer")}>
-        {NASA_LAYERS.map((l) => (
-          <button
-            key={l.id}
-            type="button"
-            role="radio"
-            aria-checked={l.id === layerId}
-            onClick={() => setLayerId(l.id)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-xs transition-colors focus-ring",
-              l.id === layerId ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"
-            )}
-          >
-            {t(l.name)}
+      <div className="mt-4 flex flex-wrap items-center gap-1.5" role="group" aria-label={t("Map layer")}>
+        {NASA_LAYERS.map((l) => {
+          const on = layerIds.includes(l.id);
+          return (
+            <button
+              key={l.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggleLayer(l.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors focus-ring",
+                on ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"
+              )}
+            >
+              {on ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Plus className="h-3.5 w-3.5 opacity-60" aria-hidden="true" />}
+              {t(l.name)}
+            </button>
+          );
+        })}
+        {layerIds.length > 0 && (
+          <button type="button" onClick={() => setLayerIds([])} className="ms-1 rounded-full px-2.5 py-1.5 text-xs text-muted-foreground underline-offset-2 hover:underline focus-ring">
+            {t("All off")}
           </button>
-        ))}
+        )}
       </div>
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
@@ -190,11 +223,14 @@ export default function FarmMap({ className }) {
           attributionControl
         >
           <TileLayer key={base} url={base} maxNativeZoom={8} maxZoom={19} attribution="NASA Blue Marble / Black Marble (GIBS)" />
-          {layer.composite ? (
-            <VegetationLayer key="veg" opacity={opacity} />
-          ) : (
-            <TileLayer key={layer.id} url={layer.url} opacity={opacity} maxNativeZoom={layer.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
-          )}
+          {active.map((l) => {
+            const z = 200 + STACK.indexOf(l.id) * 10;
+            return l.composite ? (
+              <VegetationLayer key={l.id} opacity={opacity} zIndex={z} />
+            ) : (
+              <TileLayer key={l.id} url={l.url} opacity={opacity} zIndex={z} maxNativeZoom={l.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
+            );
+          })}
           {/* Grey out every country the app doesn't cover yet. */}
           <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1f2523" : "#a3aaa7", fillOpacity: 1 }} interactive={false} />
           <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
@@ -241,7 +277,7 @@ export default function FarmMap({ className }) {
                 setHotspots((v) => !v);
                 if (!hotspots) {
                   setTarget({ point: [profile.lat, profile.lng], zoom: 14, at: Date.now() });
-                  setLayerId("landsat"); // 30 m image, so the fields show under the slope grid
+                  toggleLayer("landsat", true); // 30 m image, so the fields show under the slope grid
                 }
               }}
             >
@@ -261,20 +297,30 @@ export default function FarmMap({ className }) {
         </p>
       </div>
         <aside className="rounded-xl border p-4 text-sm [border-color:var(--card-line)]" aria-label={t("Map legend")} data-testid="map-legend">
-          <p className="font-semibold">{t(layer.name)}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{layer.mission}</p>
-          {layer.legend && (
-            <img src={layer.legend} alt={t("NASA colour scale for this layer")} className="mt-3 w-full rounded-md bg-white p-1.5" loading="lazy" />
-          )}
-          <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("What the colours mean")}</p>
-          <ul className="mt-2 space-y-2">
-            {layer.key.map(([color, text]) => (
-              <li key={text} className="flex items-start gap-2.5 text-xs leading-relaxed">
-                <span className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-sm border border-foreground/20" style={{ background: color === "transparent" ? "repeating-linear-gradient(45deg, transparent 0 3px, hsl(var(--muted-foreground) / 0.4) 3px 4px)" : color }} />
-                <span>{t(text)}</span>
-              </li>
-            ))}
-          </ul>
+          {active.length === 0 && <p className="text-xs text-muted-foreground">{t("No satellite layer is on. Tap a layer above to show it.")}</p>}
+          {active.map((layer, i) => (
+            <div key={layer.id} className={cn(i > 0 && "mt-5 border-t pt-4 [border-color:var(--card-line)]")}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold">{t(layer.name)}</p>
+                <button type="button" onClick={() => toggleLayer(layer.id, false)} className="rounded p-0.5 text-muted-foreground hover:text-foreground focus-ring" aria-label={t("Turn off {name}", { name: t(layer.name) })}>
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">{layer.mission}</p>
+              {layer.legend && (
+                <img src={layer.legend} alt={t("NASA colour scale for this layer")} className="mt-3 w-full rounded-md bg-white p-1.5" loading="lazy" />
+              )}
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("What the colours mean")}</p>
+              <ul className="mt-2 space-y-2">
+                {layer.key.map(([color, text]) => (
+                  <li key={text} className="flex items-start gap-2.5 text-xs leading-relaxed">
+                    <span className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-sm border border-foreground/20" style={{ background: color === "transparent" ? "repeating-linear-gradient(45deg, transparent 0 3px, hsl(var(--muted-foreground) / 0.4) 3px 4px)" : color }} />
+                    <span>{t(text)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
           <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("On the map")}</p>
           <ul className="mt-2 space-y-2 text-xs">
             <li className="flex items-center gap-2.5"><span className="h-3.5 w-3.5 rounded-full border-[3px] border-harvest bg-forest" />{t("Your farm")}</li>
@@ -294,9 +340,13 @@ export default function FarmMap({ className }) {
       {!hasPoint && <p className="mt-2 text-xs text-muted-foreground">{t("Set your farm location under My farm to see your farm on the map.")}</p>}
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{t(layer.name)} <span className="text-xs font-normal text-muted-foreground">· {layer.mission}</span></p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{t(layer.what)}</p>
+        <div className="min-w-0 flex-1 space-y-2">
+          {active.map((layer) => (
+            <div key={layer.id}>
+              <p className="text-sm font-medium">{t(layer.name)} <span className="text-xs font-normal text-muted-foreground">· {layer.mission}</span></p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{t(layer.what)}</p>
+            </div>
+          ))}
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           {t("Layer strength")}
