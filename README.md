@@ -81,3 +81,4 @@ How it works:
 - `ARCHITECTURE.md`: how the app is structured
 - `MIGRATION_PLAN.md`: what replaces each Base44 piece
 - `FEATURE_STATUS.md`: feature-by-feature status
+1
