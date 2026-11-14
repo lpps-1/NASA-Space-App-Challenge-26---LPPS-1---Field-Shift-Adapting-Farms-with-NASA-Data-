@@ -54,6 +54,9 @@ export default function SiteFooter() {
           <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
             {t("Compare crop rotations with NASA climate data, your soil and your water, and ask for advice in Urdu, Punjabi or English.")}
           </p>
+          <p className="mt-3 max-w-sm text-xs leading-relaxed text-muted-foreground" data-testid="footer-coverage">
+            {t("For now we only show data for Pakistan and the United States, because of the time we had. With about two more weeks we can cover every country and many more languages.")}
+          </p>
         </div>
         <Column title="Explore" items={EXPLORE} />
         <Column title="Policies" items={POLICIES} />
@@ -61,9 +64,11 @@ export default function SiteFooter() {
       <div className="border-t [border-color:var(--card-line)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10">
           <p>© {new Date().getFullYear()} Kisan AI · {t("Made by Team LPPS-1")} · {VERSION}</p>
-          <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Link to="/privacy" className={linkCls}>{t("Privacy Policy")}</Link>
+            <span className="h-3 w-px bg-border" aria-hidden="true" />
             <Link to="/terms" className={linkCls}>{t("Terms of Use")}</Link>
+            <span className="h-3 w-px bg-border" aria-hidden="true" />
             <Link to="/knowledge" className={linkCls}>{t("Data sources")}</Link>
           </p>
         </div>

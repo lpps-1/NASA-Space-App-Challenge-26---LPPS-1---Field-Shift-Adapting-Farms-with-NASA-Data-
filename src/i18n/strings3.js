@@ -93,4 +93,10 @@ export const R3 = {
   "US dollars and typical US prices": ["امریکی ڈالر اور امریکہ کی عام قیمتیں"],
   "Rupees and typical Pakistani prices": ["روپے اور پاکستان کی عام قیمتیں"],
   "On: Kisan AI reads every answer to you. The same switch is under the message box in the chat.": ["آن: کسان AI ہر جواب پڑھ کر سناتا ہے۔ یہی بٹن گفتگو میں پیغام کے خانے کے نیچے بھی ہے۔"],
+  "Hi, {name}": ["السلام علیکم، {name}", "السلام علیکم، {name}"],
+  "For now we only show data for Pakistan and the United States, because of the time we had. With about two more weeks we can cover every country and many more languages.": [
+    "فی الحال وقت کی کمی کی وجہ سے ہم صرف پاکستان اور امریکہ کا ڈیٹا دکھا رہے ہیں۔ تقریباً دو ہفتے مزید ملیں تو ہم ہر ملک اور کئی مزید زبانیں شامل کر سکتے ہیں۔",
+    "حالے ویلے دی کمی پاروں اسیں صرف پاکستان تے امریکہ دا ڈیٹا وکھا رہے آں۔ دو ہفتے ہور ملن تے اسیں ہر ملک تے کئی ہور بولیاں پا سکدے آں۔",
+  ],
+  "Stop answer": ["جواب روکیں", "جواب روکو"],
 };
