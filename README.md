@@ -51,13 +51,17 @@ If the key is missing or wrong, the chat says "Kisan AI isn't set up yet"; the r
 
 On Vercel, accounts are stored in the farmer's own browser (email + password), and **Explore the demo farm** always works. **Google sign-in** works on Vercel once `VITE_GOOGLE_CLIENT_ID` is set: Google's account chooser opens in a popup and `/api/auth-google` checks the token with Google (`src/lib/googleSignIn.js`). There are no server-side accounts yet: farm data stays in the browser.
 
+## Licence
+
+Our code is licensed under **Apache 2.0** ([`LICENSE`](LICENSE)). Every library, dataset, font and service we used, with its licence, is listed in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+
 ## Use of AI (SI)
 
 As the Space Apps rules ask, here is where AI tools were used:
 
 - **Code and docs:** the team used **Claude Code** (Anthropic's Claude) as a coding assistant. It wrote and edited much of the code and these documents at the team's direction (see "Two Claudes and HANDOFF.md" below); many commits carry a `Co-Authored-By: Claude` line.
 - **Chat answers:** generated live by **Google Gemini**. The app says so on the Data sources page and in the Terms, and tells farmers to check important decisions locally.
-- **Speech:** speech-to-text, and the online Urdu/Punjabi voice used when the device has no Urdu voice (on by default; can be switched off in Settings → Voice assistant), are made by **Google Gemini**. The Settings screen says when the Gemini voice is speaking.
+- **Speech:** speech-to-text, and the optional online Urdu/Punjabi voice (off by default; the farmer can switch it on in Settings → Voice assistant), are made by **Google Gemini**. By default replies are read by the device's own voice.
 - **Not AI:** the rotation scores come from fixed rules in `src/lib/rotation.js` and the 20-year statistical check, not from a language model. The app has no AI-generated images or video.
 
 ## Farm setup

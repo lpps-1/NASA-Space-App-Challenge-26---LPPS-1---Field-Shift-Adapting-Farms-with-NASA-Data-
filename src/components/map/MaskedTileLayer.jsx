@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useMap } from "react-leaflet";
+import { useMap } from "@/components/map/leaflet";
 import L from "leaflet";
 import { clipToCovered, tileTouchesCovered } from "@/components/map/coverMask";
 import { loadImage } from "@/components/map/loadImage";

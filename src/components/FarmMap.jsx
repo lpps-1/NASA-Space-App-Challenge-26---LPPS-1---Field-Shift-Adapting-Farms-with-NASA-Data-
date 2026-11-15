@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Rectangle, ScaleControl, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Rectangle, ScaleControl, useMap } from "@/components/map/leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Check, Eye, EyeOff, Globe2, LocateFixed, Mountain, Plus, Satellite, TriangleAlert, X } from "lucide-react";
@@ -251,9 +251,13 @@ export default function FarmMap({ className }) {
           <MaskedTileLayer url={labels} mask={false} maxNativeZoom={9} minZoom={4} opacity={0.9} zIndex={650} />
           <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
           {hasPoint && (
-            <CircleMarker center={[profile.lat, profile.lng]} radius={7} pathOptions={{ color: "#F2C94C", weight: 3, fillColor: "#123D2A", fillOpacity: 1 }}>
-              <Tooltip direction="top" offset={[0, -6]}>{profile.district || t("Your farm")}</Tooltip>
-            </CircleMarker>
+            <CircleMarker
+              center={[profile.lat, profile.lng]}
+              radius={7}
+              pathOptions={{ color: "#F2C94C", weight: 3, fillColor: "#123D2A", fillOpacity: 1 }}
+              tooltip={profile.district || t("Your farm")}
+              tooltipOptions={{ direction: "top", offset: [0, -6] }}
+            />
           )}
           {/* Erosion hotspots: slope of each 150 m patch around the farm (NASA SRTM). */}
           {hotspots &&
@@ -266,9 +270,8 @@ export default function FarmMap({ className }) {
                   key={`${c.lat},${c.lng}`}
                   bounds={[[c.lat - dLat, c.lng - dLng], [c.lat + dLat, c.lng + dLng]]}
                   pathOptions={{ color, weight: 0.5, fillColor: color, fillOpacity: c.erosion_risk === "low" ? 0.15 : 0.55 }}
-                >
-                  <Tooltip>{t("Slope {s}% · erosion risk {r}", { s: c.slope_pct, r: t(c.erosion_risk) })}</Tooltip>
-                </Rectangle>
+                  tooltip={t("Slope {s}% · erosion risk {r}", { s: c.slope_pct, r: t(c.erosion_risk) })}
+                />
               );
             })}
           <FlyTo target={target} />
