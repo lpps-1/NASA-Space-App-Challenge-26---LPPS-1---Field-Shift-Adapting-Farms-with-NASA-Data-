@@ -16,7 +16,7 @@
  */
 
 import { detectLanguage } from "./language.js";
-import { hasArabicScript, urduToDevanagari } from "./urduTranslit.js";
+import { hasArabicScript } from "./urduTranslit.js";
 
 let sharedCtx = null;
 function audioContext() {
@@ -440,10 +440,9 @@ const PREFS = {
   // Only Shahmukhi Punjabi voices can read Punjabi in Urdu script. pa-IN voices read Gurmukhi.
   "pa-Arab": ["pa-pk", "pa-arab"],
   "pa-Guru": ["pa-in", "pa-guru", "pa"],
-  hi: ["hi-in", "hi"],
   en: ["en-pk", "en-in", "en-gb", "en-us", "en"],
 };
-const BCP = { ur: "ur-PK", "pa-Guru": "pa-IN", hi: "hi-IN", en: "en-US" };
+const BCP = { ur: "ur-PK", "pa-Guru": "pa-IN", en: "en-US" };
 
 export function pickVoice(lang) {
   const prefs = PREFS[lang] || PREFS.en;
@@ -465,31 +464,30 @@ export function hasVoiceFor(lang) {
 
 const isUrduReader = (v) => /^(ur|pa-pk|pa-arab)/.test(langOf(v));
 
-/** Voices that can read Urdu replies: Urdu and Shahmukhi Punjabi voices, and Hindi voices (via Devanagari). */
+/**
+ * Voices that can read Urdu replies: Urdu and Shahmukhi Punjabi voices only. Hindi voices are
+ * never used (the app covers Pakistan, and a Hindi voice gives Urdu an Indian accent).
+ */
 export function urduCapableVoices() {
-  const prefs = [...PREFS.ur, ...PREFS["pa-Arab"], ...PREFS.hi];
+  const prefs = [...PREFS.ur, ...PREFS["pa-Arab"]];
   return voices()
-    .filter((v) => isUrduReader(v) || langOf(v).startsWith("hi"))
+    .filter(isUrduReader)
     .sort((a, b) => score(b, prefs) - score(a, prefs));
 }
 
 /**
  * How Urdu will be spoken on this device:
  *  { mode: "native", voice }  an Urdu (or Shahmukhi Punjabi) voice reads Urdu script
- *  { mode: "hindi", voice }   a Hindi voice reads a Devanagari spelling of the Urdu words
- *  { mode: "none", voice: null }  no voice can pronounce Urdu; never fall back to English
+ *  { mode: "none", voice: null }  no Urdu voice: never fall back to English or Hindi
  * `preferredURI` is the voice chosen in Settings (optional).
  */
 export function urduVoicePlan(preferredURI) {
   const chosen = preferredURI ? voices().find((v) => v.voiceURI === preferredURI) : null;
   if (chosen) {
     if (isUrduReader(chosen)) return { mode: "native", voice: chosen };
-    if (langOf(chosen).startsWith("hi")) return { mode: "hindi", voice: chosen };
   }
   const ur = pickVoice("ur") || pickVoice("pa-Arab");
   if (ur) return { mode: "native", voice: ur };
-  const hi = pickVoice("hi");
-  if (hi) return { mode: "hindi", voice: hi };
   return { mode: "none", voice: null };
 }
 
@@ -627,8 +625,8 @@ function cachedPrepare(prepare, text, target) {
 const URDU_FAMILY = new Set(["ur", "ur-Latn", "pa", "pa-Latn", "sd", "ps", "hi"]);
 
 // ---- Cloud Urdu voice (Gemini via /api/tts) ----
-// Used when the device has no Urdu voice, so Urdu is heard in a Pakistani Urdu
-// voice instead of a Hindi voice. Falls back to the device's voices on any error.
+// Used when the device has no Urdu voice. If it fails, the device's own Urdu voice is used when
+// there is one; otherwise the answer stays as text (a Hindi voice is never used).
 const CLOUD_LANGS = new Set(["ur", "ur-Latn", "pa"]);
 let cloudOffUntil = 0; // set after quota errors or repeated failures
 let cloudFailures = 0;
@@ -698,11 +696,6 @@ async function devicePlan(text, hint, opts, prepare, reason) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Makes sure a Hindi voice gets Devanagari, never Urdu script (which it reads as silence). */
-function forHindiVoice(text) {
-  return hasArabicScript(text) ? urduToDevanagari(text) : text;
-}
-
 /**
  * Decides the voice and spoken text for one piece of a reply.
  * `hint` is the reply language from /api/assistant ("ur", "ur-Latn", "pa", "en", …):
@@ -724,10 +717,7 @@ async function planPiece(text, hint, opts, prepare) {
   if (lang === "pa-Guru") {
     const voice = pickVoice("pa-Guru");
     if (voice) return { voice, lang: voice.lang, rate: rate * 0.95, text, mode: "pa" };
-    const hi = pickVoice("hi");
-    return hi
-      ? { voice: hi, lang: hi.lang, rate: rate * 0.95, text, mode: "hindi" }
-      : { voice: null, lang: BCP["pa-Guru"], rate, text: "", mode: "none" };
+    return { voice: null, lang: BCP["pa-Guru"], rate, text: "", mode: "none" };
   }
 
   // Shahmukhi Punjabi: use a Pakistani Punjabi voice when the device has one, otherwise the Urdu voice.
@@ -738,17 +728,6 @@ async function planPiece(text, hint, opts, prepare) {
   const roman = lang === "ur-Latn";
 
   if (urdu.mode === "none") return { ...base, text: "" };
-
-  if (urdu.mode === "hindi") {
-    const src = urduSpeech(text);
-    if (!prepare || (!hasArabicScript(src) && !roman)) return { ...base, text: forHindiVoice(src) };
-    try {
-      const converted = await cachedPrepare(prepare, src, "hi");
-      return { ...base, text: forHindiVoice(converted) };
-    } catch {
-      return { ...base, text: forHindiVoice(src) };
-    }
-  }
 
   // Native Urdu voice.
   if (roman && prepare) {
@@ -780,7 +759,7 @@ async function planPiece(text, hint, opts, prepare) {
  *  - onStart(): the first piece of a reply started playing.
  *  - onEnd(result): the reply finished (or was stopped). result =
  *      { spoken, skipped, blocked, failed, stopped } counts/flags.
- *  - onMissingVoice(lang, mode): once per language when no proper voice exists ("hindi" | "none").
+ *  - onMissingVoice(lang, mode): once per language when no proper voice exists ("none").
  *  - onBlocked(): the browser refused to play speech without a tap.
  *  - synthesize(text): async → audio Blob of real Urdu speech (kisan.services.speechAudio).
  *    Used for Urdu, Roman Urdu and Shahmukhi Punjabi when the device has no Urdu voice.
@@ -827,7 +806,7 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
     for (const piece of joinShort(pieces, RUN)) {
       queue.push(
         planPiece(piece, lang, opts, prepare).then((p) => {
-          if (p.mode === "hindi" || p.mode === "none") warn(lang || scriptLang(piece), p.mode);
+          if (p.mode === "none") warn(lang || scriptLang(piece), p.mode);
           if (p.mode === "none") stats.missing = lang || scriptLang(piece);
           return p;
         })
@@ -924,7 +903,7 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
         if (p.mode === "cloud") urls.add(p.url);
         else
           for (const piece of p.pieces || []) {
-            if (piece.mode === "hindi" || piece.mode === "none") warn(cloudLang || scriptLang(piece.text), piece.mode);
+            if (piece.mode === "none") warn(cloudLang || scriptLang(piece.text), piece.mode);
             if (piece.mode === "none") stats.missing = cloudLang || scriptLang(piece.text);
           }
         return p;
@@ -989,6 +968,18 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
         const planned = await queue[0];
         if (myGen !== gen) return;
         queue.shift();
+        if ((planned.mode === "skip" || planned.mode === "expand") && replyVoice === "cloud") {
+          // The reply started in the online Pakistani voice and it failed on a later chunk:
+          // stop here instead of finishing in a different voice or with gaps. The rest stays as text.
+          stats.cut = true;
+          queue = [];
+          cloudBuf = "";
+          if (!warned.cut) {
+            warned.cut = true;
+            onCloudError?.(planned.reason === "quota" ? "quota-partial" : "partial");
+          }
+          break;
+        }
         if (planned.mode === "skip") {
           // Urdu speech unavailable: keep the answer as text, tell the page once per reply.
           if (!warned.cloud) {
@@ -998,18 +989,6 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
           continue;
         }
         if (planned.mode === "expand") {
-          if (replyVoice === "cloud") {
-            // The reply started in the online Pakistani voice and it failed on a later chunk:
-            // stop here instead of finishing in a different (Hindi) accent. The rest stays as text.
-            stats.cut = true;
-            queue = [];
-            cloudBuf = "";
-            if (!warned.cut) {
-              warned.cut = true;
-              onCloudError?.(planned.reason === "quota" ? "quota-partial" : "partial");
-            }
-            break;
-          }
           // Cloud voice failed at the start: the whole reply uses the device's voices.
           queue.unshift(...planned.pieces.map((x) => Promise.resolve(x)));
           continue;

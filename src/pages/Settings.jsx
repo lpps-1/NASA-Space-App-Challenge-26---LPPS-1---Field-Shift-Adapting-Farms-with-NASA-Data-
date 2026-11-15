@@ -52,11 +52,7 @@ function VoiceSettings({ s, set }) {
             {plan.mode === "native" && t("Using {name}, a native Urdu voice.", { name: plan.voice.name })}
             {plan.mode !== "native" && !s.tts_voice && (s.online_urdu_voice
               ? t("Kisan AI speaks Urdu with the online Gemini voice, and with this device's voice when that isn't available.")
-              : plan.mode === "hindi"
-                ? t("This device has no Urdu voice, so a Hindi voice reads the Urdu words. Microsoft Edge has natural Pakistani Urdu voices built in.")
-                : t("This device has no Urdu or Hindi voice. Use Microsoft Edge, or switch on the online Urdu voice below."))}
-            {plan.mode === "hindi" && s.tts_voice &&
-              t("Using {name}: a Hindi voice reading the Urdu words. Choose \"Automatic\" for the online Pakistani Urdu voice.", { name: plan.voice.name })}
+              : t("This device has no Urdu voice. Use Microsoft Edge, or switch on the online Urdu voice below."))}
           </p>
         </div>
         <select

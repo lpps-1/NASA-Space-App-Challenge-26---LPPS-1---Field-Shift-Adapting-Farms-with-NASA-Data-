@@ -138,26 +138,13 @@ await scenario("Voices that load late are waited for (no English fallback)", asy
   assert.match(spoken[0].voice, /Urdu/);
 });
 
-await scenario("Hindi-only device: Urdu is spelled in Devanagari via /api/speech-text", async () => {
+await scenario("Hindi-only device: Urdu is never read by the Hindi voice", async () => {
   const spoken = installSynth({ voices: VOICE_SETS.chrome });
   const v = await fresh();
-  const prepare = async () => "व अलैकुम अस्सलाम! जी बताएं";
-  const r = await runReply(v, ["وعلیکم السلام! جی بتائیں"], { lang: "ur", prepare, onMissingVoice: () => {} });
-  assert.ok(r.spoken >= 1);
-  assert.ok(spoken.every((s) => s.voice === "Google हिन्दी"));
-  assert.ok(spoken.every((s) => !/[؀-ۿ]/.test(s.text)), "Hindi voice was handed Urdu script");
-});
-
-await scenario("Hindi-only device: offline transliteration when /api/speech-text fails", async () => {
-  const spoken = installSynth({ voices: VOICE_SETS.chrome });
-  const v = await fresh();
-  const prepare = async () => {
-    throw new Error("offline");
-  };
-  const r = await runReply(v, [GREETING], { lang: "ur", prepare, onMissingVoice: () => {} });
-  assert.equal(r.spoken, 1);
-  assert.ok(spoken.every((s) => /[ऀ-ॿ]/.test(s.text) && !/[؀-ۿ]/.test(s.text)), JSON.stringify(spoken));
-  assert.match(spoken[0].text, /अलैकुम/);
+  const r = await runReply(v, [GREETING], { lang: "ur", prepare: async () => "जी", onMissingVoice: () => {} });
+  assert.equal(spoken.length, 0, `Hindi voice spoke: ${spoken.map((x) => x.text).join(" | ")}`);
+  assert.equal(r.missing, "ur");
+  assert.equal(v.urduCapableVoices().length, 0, "Hindi voice offered in Settings");
 });
 
 await scenario("No Urdu or Hindi voice: Urdu is NOT read by the English voice, and the UI is told", async () => {
@@ -273,7 +260,7 @@ await scenario("Online voice fails partway: the reply stops, it never switches t
   assert.deepEqual(r.errors, ["quota-partial"]);
 });
 
-await scenario("Online voice fails at the start: the whole reply uses the device voice", async () => {
+await scenario("Online voice fails at the start on a Hindi-only device: text only, no Hindi voice", async () => {
   const spoken = installSynth({ voices: VOICE_SETS.chrome });
   globalThis.Audio = FakeAudio;
   const v = await fresh();
@@ -283,8 +270,8 @@ await scenario("Online voice fails at the start: the whole reply uses the device
     throw Object.assign(new Error("down"), { status: 503 });
   };
   const r = await cloudReply(v, LONG, synthesize);
-  assert.ok(spoken.length >= 1 && spoken.every((x) => x.voice === "Google हिन्दी"));
-  assert.ok(!r.cut);
+  assert.equal(spoken.length, 0, "Hindi voice spoke");
+  assert.ok(r.errors.length >= 1, "page was not told why the answer is text");
   assert.ok(calls <= 2, `online voice retried on later chunks (${calls} calls)`);
 });
 

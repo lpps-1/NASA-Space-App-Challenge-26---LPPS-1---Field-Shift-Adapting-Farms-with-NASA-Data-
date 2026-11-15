@@ -362,15 +362,7 @@ export default function Assistant() {
           });
         },
         getOptions: () => ttsOptionsRef.current,
-        onMissingVoice: (lang, mode) => {
-          if (mode === "hindi") {
-            toast.info("Speaking Urdu with this device's Hindi voice", {
-              description:
-                "No Urdu voice is installed, so Kisan AI spells the Urdu words for the Hindi voice so they sound like Urdu. For a native Pakistani Urdu voice, use Microsoft Edge, or on Android install Urdu voice data (Settings → Text-to-speech → Google).",
-              duration: 9000,
-            });
-          }
-        },
+        onMissingVoice: () => {}, // a Hindi voice is never used; without an Urdu voice the answer stays as text
       }),
     []
   );
