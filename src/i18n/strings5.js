@@ -12,6 +12,15 @@ export const R5 = {
     "ملک {country} کر دیا گیا۔ پوری ایپ اب {place} استعمال کر رہی ہے۔ نیچے اپنی جگہ اور فصلیں درج کریں۔",
     "ملک {country} کر دتا گیا۔ پوری ایپ ہُن {place} ورت رہی اے۔ ہیٹھاں اپنی تھاں تے فصلاں پاؤ۔",
   ],
+  "The rest of this answer is shown as text": ["اس جواب کا باقی حصہ تحریر میں دکھایا گیا ہے", "ایس جواب دا باقی حصہ لکھت وچ وکھایا گیا اے"],
+  "Today's free Urdu voice limit ran out partway through. Kisan AI stopped instead of switching to a Hindi-accented voice.": [
+    "آج کی مفت اردو آواز کی حد بیچ میں ختم ہو گئی۔ کسان AI ہندی لہجے والی آواز پر جانے کے بجائے رک گیا۔",
+    "اج دی مفت اردو آواز دی حد وچکار مُک گئی۔ کسان AI ہندی لہجے والی آواز تے جان دی تھاں رُک گیا۔",
+  ],
+  "The Urdu voice stopped answering partway through. Kisan AI stopped instead of switching to a Hindi-accented voice.": [
+    "اردو آواز بیچ میں جواب دینا بند ہو گئی۔ کسان AI ہندی لہجے والی آواز پر جانے کے بجائے رک گیا۔",
+    "اردو آواز وچکار جواب دینا بند کر گئی۔ کسان AI ہندی لہجے والی آواز تے جان دی تھاں رُک گیا۔",
+  ],
   "Chat deleted": ["گفتگو حذف ہو گئی", "گل بات مٹ گئی"],
   "Undo": ["واپس لائیں", "واپس لیاؤ"],
   "Change location": ["مقام بدلیں", "تھاں بدلو"],

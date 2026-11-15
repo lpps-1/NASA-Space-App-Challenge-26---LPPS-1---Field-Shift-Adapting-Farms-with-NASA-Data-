@@ -801,7 +801,13 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
   let cloudBuf = "";
   let cloudLang = null;
   let cloudChunks = 0; // chunks sent for the current reply (the first is kept short for a quick start)
+  // One voice per reply. The first Urdu chunk decides: the online Pakistani voice, or the device's
+  // voices. A reply never changes voice halfway (it used to: when the online voice failed on a
+  // later chunk, e.g. the daily quota ran out, that chunk was read with the Hindi voice, so the
+  // accent changed mid-answer). "cloud" | "device" | null (not decided yet).
+  let replyVoice = null;
   const urls = new Set();
+  let decided = null; // resolves once the first chunk of the reply has picked its voice
   // Device voices: a reply streams in one sentence at a time. Speaking each sentence as its own
   // utterance put a long gap (the engine stopping and starting) at every full stop. Sentences that
   // arrive while something is already playing wait here and are spoken together as one longer run.
@@ -836,7 +842,7 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
   };
 
   const resetStats = () => {
-    stats = { spoken: 0, skipped: 0, failed: 0, blocked: false, stopped: false, missing: null };
+    stats = { spoken: 0, skipped: 0, failed: 0, blocked: false, stopped: false, missing: null, cut: false };
   };
   resetStats();
 
@@ -848,7 +854,11 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
 
   const finish = () => {
     cloudChunks = 0;
+    replyVoice = null;
+    decided = null;
     const result = { ...stats };
+    delete warned.cut;
+    delete warned.cloud;
     speaking = false;
     inReply = false;
     resetStats();
@@ -900,8 +910,17 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
     cloudBuf = cloudBuf.slice(chunk.length);
     cloudChunks++;
     const opts = getOptions?.() || {};
+    const lang = cloudLang;
+    // Later chunks wait for the first one's outcome, so they follow the same voice.
+    const first = cloudChunks === 1 ? null : decided;
+    const planned = (first || Promise.resolve()).then(() =>
+      replyVoice === "device" ? devicePlan(chunk.trim(), lang, opts, prepare, null) : planCloud(chunk.trim(), lang, opts, prepare, synthesize),
+    );
+    if (cloudChunks === 1) decided = planned.then((p) => {
+      if (!replyVoice) replyVoice = p.mode === "cloud" ? "cloud" : "device";
+    });
     queue.push(
-      planCloud(chunk.trim(), cloudLang, opts, prepare, synthesize).then((p) => {
+      planned.then((p) => {
         if (p.mode === "cloud") urls.add(p.url);
         else
           for (const piece of p.pieces || []) {
@@ -979,7 +998,19 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
           continue;
         }
         if (planned.mode === "expand") {
-          // Cloud voice failed: speak this chunk with the device's voices instead.
+          if (replyVoice === "cloud") {
+            // The reply started in the online Pakistani voice and it failed on a later chunk:
+            // stop here instead of finishing in a different (Hindi) accent. The rest stays as text.
+            stats.cut = true;
+            queue = [];
+            cloudBuf = "";
+            if (!warned.cut) {
+              warned.cut = true;
+              onCloudError?.(planned.reason === "quota" ? "quota-partial" : "partial");
+            }
+            break;
+          }
+          // Cloud voice failed at the start: the whole reply uses the device's voices.
           queue.unshift(...planned.pieces.map((x) => Promise.resolve(x)));
           continue;
         }
@@ -1064,6 +1095,8 @@ export function createSpeaker({ onStart, onEnd, onMissingVoice, onBlocked, onClo
       queue = [];
       cloudBuf = "";
       cloudChunks = 0;
+      replyVoice = null;
+      decided = null;
       devBuf = [];
       clearTimeout(devTimer);
       closed = true;

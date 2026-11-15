@@ -228,6 +228,66 @@ await scenario("Interrupting: stop() then a new reply — no overlap, no duplica
   assert.ok(!texts.includes("دوسرا جملہ۔"), "old reply kept talking after stop()");
 });
 
+// ---- One voice per reply (online Pakistani Urdu voice vs the device's Hindi voice).
+class FakeAudio {
+  play() {
+    setTimeout(() => this.onended?.(), 5);
+    return Promise.resolve();
+  }
+  pause() {}
+}
+function cloudReply(v, chunks, synthesize) {
+  return new Promise((resolve) => {
+    const errors = [];
+    const s = v.createSpeaker({
+      onEnd: (r) => resolve({ ...r, errors }),
+      onCloudError: (reason) => errors.push(reason),
+      onMissingVoice: () => {},
+      synthesize,
+      prepare: async () => "जी बिल्कुल",
+      getOptions: () => ({ rate: 1, cloudVoice: true }),
+    });
+    for (const c of chunks) s.enqueue(c, { lang: "ur" });
+    s.close();
+  });
+}
+const LONG = [
+  "جی بالکل! میں اردو اور پنجابی اچھی طرح سمجھتا ہوں اور بول سکتا ہوں۔",
+  "آپ اپنے کھیت، فصل، پانی یا مویشیوں کے بارے میں کوئی بھی سوال پوچھ سکتے ہیں۔ ".repeat(4),
+  "آپ کی کون سی فصل ہے یا آپ کو کس چیز میں مدد چاہیے؟",
+];
+
+await scenario("Online voice fails partway: the reply stops, it never switches to the Hindi voice", async () => {
+  const spoken = installSynth({ voices: VOICE_SETS.chrome });
+  globalThis.Audio = FakeAudio;
+  const v = await fresh();
+  let calls = 0;
+  const synthesize = async () => {
+    calls++;
+    if (calls === 1) return new Blob(["x"], { type: "audio/wav" });
+    throw Object.assign(new Error("quota"), { status: 429 });
+  };
+  const r = await cloudReply(v, LONG, synthesize);
+  assert.equal(spoken.length, 0, `Hindi voice spoke: ${spoken.map((x) => x.text).join(" | ")}`);
+  assert.ok(r.cut, "reply should be marked as cut");
+  assert.deepEqual(r.errors, ["quota-partial"]);
+});
+
+await scenario("Online voice fails at the start: the whole reply uses the device voice", async () => {
+  const spoken = installSynth({ voices: VOICE_SETS.chrome });
+  globalThis.Audio = FakeAudio;
+  const v = await fresh();
+  let calls = 0;
+  const synthesize = async () => {
+    calls++;
+    throw Object.assign(new Error("down"), { status: 503 });
+  };
+  const r = await cloudReply(v, LONG, synthesize);
+  assert.ok(spoken.length >= 1 && spoken.every((x) => x.voice === "Google हिन्दी"));
+  assert.ok(!r.cut);
+  assert.ok(calls <= 2, `online voice retried on later chunks (${calls} calls)`);
+});
+
 await scenario("Five consecutive voice turns all speak", async () => {
   const spoken = installSynth({ voices: VOICE_SETS.edge });
   const v = await fresh();

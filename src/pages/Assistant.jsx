@@ -342,6 +342,15 @@ export default function Assistant() {
         prepare: (text, target) => kisan.services.speechText(text, target),
         synthesize: (text) => kisan.services.speechAudio(text),
         onCloudError: (reason) => {
+          if (reason === "partial" || reason === "quota-partial") {
+            toast.info(tRef.current("The rest of this answer is shown as text"), {
+              description:
+                reason === "quota-partial"
+                  ? tRef.current("Today's free Urdu voice limit ran out partway through. Kisan AI stopped instead of switching to a Hindi-accented voice.")
+                  : tRef.current("The Urdu voice stopped answering partway through. Kisan AI stopped instead of switching to a Hindi-accented voice."),
+            });
+            return;
+          }
           const why =
             reason === "quota"
               ? tRef.current("today's free voice limit is used up")
