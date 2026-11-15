@@ -8,6 +8,10 @@ export const R5 = {
   "High": ["زیادہ", "ودھ"],
   "Medium": ["درمیانہ", "درمیانہ"],
   "Ignore": ["نظر انداز کریں", "چھڈ دیو"],
+  "Country changed to {country}. The whole app now uses {place}. Set your own place and crops below.": [
+    "ملک {country} کر دیا گیا۔ پوری ایپ اب {place} استعمال کر رہی ہے۔ نیچے اپنی جگہ اور فصلیں درج کریں۔",
+    "ملک {country} کر دتا گیا۔ پوری ایپ ہُن {place} ورت رہی اے۔ ہیٹھاں اپنی تھاں تے فصلاں پاؤ۔",
+  ],
   "Chat deleted": ["گفتگو حذف ہو گئی", "گل بات مٹ گئی"],
   "Undo": ["واپس لائیں", "واپس لیاؤ"],
   "Change location": ["مقام بدلیں", "تھاں بدلو"],

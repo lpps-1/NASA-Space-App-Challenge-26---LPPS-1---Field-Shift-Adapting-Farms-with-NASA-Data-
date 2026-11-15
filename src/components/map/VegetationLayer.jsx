@@ -33,11 +33,24 @@ const monthsBack = (list) => {
   });
 };
 
+// Colour → value tables keyed by one number (r<<16 | g<<8 | b): no string is built per pixel.
+const numeric = {};
+function numericTable(name) {
+  if (!numeric[name]) {
+    numeric[name] = new Map();
+    for (const [k, v] of colorTable(name)) {
+      const [r, g, b] = k.split(",").map(Number);
+      numeric[name].set((r << 16) | (g << 8) | b, v);
+    }
+  }
+  return numeric[name];
+}
+
 const decoded = new Map(); // url -> Promise<Float32Array | null>
 function values(url, table) {
   if (!decoded.has(url)) {
     if (decoded.size > 400) decoded.delete(decoded.keys().next().value);
-    const cmap = colorTable(table);
+    const cmap = numericTable(table);
     decoded.set(
       url,
       new Promise((resolve) => {
@@ -51,10 +64,19 @@ function values(url, table) {
             g.drawImage(img, 0, 0, 256, 256);
             const px = g.getImageData(0, 0, 256, 256).data;
             const out = new Float32Array(256 * 256);
+            let lastKey = -1, lastVal = NaN; // neighbouring pixels usually share a colour
             for (let i = 0; i < out.length; i++) {
-              const a = px[i * 4 + 3];
-              const v = a === 0 ? undefined : cmap.get(`${px[i * 4]},${px[i * 4 + 1]},${px[i * 4 + 2]}`);
-              out[i] = v == null ? NaN : v;
+              if (px[i * 4 + 3] === 0) {
+                out[i] = NaN;
+                continue;
+              }
+              const key = (px[i * 4] << 16) | (px[i * 4 + 1] << 8) | px[i * 4 + 2];
+              if (key !== lastKey) {
+                const v = cmap.get(key);
+                lastKey = key;
+                lastVal = v == null ? NaN : v;
+              }
+              out[i] = lastVal;
             }
             resolve(out);
           } catch {
@@ -70,26 +92,50 @@ function values(url, table) {
 }
 
 /** Source tile + offset for one display tile, when the source has fewer zoom levels. */
-function source(layer, time, maxZ, table, { x, y, z }) {
+function source(layer, time, maxZ, table, { x, y, z }, matrix = maxZ) {
   const zs = Math.min(z, maxZ);
   const f = 2 ** (z - zs);
   const tx = Math.floor(x / f), ty = Math.floor(y / f);
-  const url = `${WMTS}/${layer}/default/${time}/GoogleMapsCompatible_Level${maxZ}/${zs}/${ty}/${tx}.png`;
+  const url = `${WMTS}/${layer}/default/${time}/GoogleMapsCompatible_Level${matrix}/${zs}/${ty}/${tx}.png`;
   return values(url, table).then((arr) => (arr ? { arr, f, ox: (x % f) * (256 / f), oy: (y % f) * (256 / f) } : null));
 }
 const at = (s, px, py) => (s ? s.arr[Math.floor(s.oy + py / s.f) * 256 + Math.floor(s.ox + px / s.f)] : NaN);
 
-async function compose(coords, hidden = new Set()) {
-  const months = monthsBack([2, 4, 6, 8, 10]);
-  const [lc, now, ...monthly] = await Promise.all([
+// Data is only shown inside Pakistan and the United States (the pane is clipped to them), so tiles
+// that lie wholly outside these boxes are left empty without downloading anything.
+const COVERED_BOXES = [
+  [23.4, 60.8, 37.2, 77.9], // Pakistan: south, west, north, east
+  [24.3, -125.1, 49.5, -66.8], // US lower 48
+  [51, -180, 71.6, -129.9], // Alaska
+  [18.8, -160.4, 22.4, -154.7], // Hawaii
+];
+function tileCovered({ x, y, z }) {
+  const n = 2 ** z;
+  const xw = ((x % n) + n) % n;
+  const lng = (t) => (t / n) * 360 - 180;
+  const lat = (t) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * t) / n))) * 180) / Math.PI;
+  const w = lng(xw), e = lng(xw + 1), north = lat(y), south = lat(y + 1);
+  return COVERED_BOXES.some(([s, bw, nn, be]) => south < nn && north > s && w < be && e > bw);
+}
+
+/** The two images every tile needs (land cover + greenness now): enough for forests and field crops. */
+const baseSources = (coords) =>
+  Promise.all([
     source("MODIS_Combined_L3_IGBP_Land_Cover_Type_Annual", "default", 8, "landcover", coords),
     source("MODIS_Terra_NDVI_8Day", "default", 9, "ndvi", coords),
-    ...months.map((m) => source("MODIS_Terra_L3_NDVI_Monthly", m, 7, "ndvi", coords)),
   ]);
+/**
+ * Five monthly images over the last year (for orchards: farmland green all year). They are 1 km
+ * data, so they are fetched one zoom level coarser than the screen: a quarter of the downloads.
+ */
+const monthlySources = (coords) =>
+  Promise.all(monthsBack([2, 4, 6, 8, 10]).map((m) => source("MODIS_Terra_L3_NDVI_Monthly", m, Math.min(7, Math.max(3, coords.z - 1)), "ndvi", coords, 7)));
+
+function paint(lc, now, monthly, hidden = new Set()) {
   const img = new ImageData(256, 256);
   const d = img.data;
   if (!lc) return img;
-  const mon = monthly.filter(Boolean);
+  const mon = (monthly || []).filter(Boolean);
   for (let py = 0; py < 256; py++)
     for (let px = 0; px < 256; px++) {
       const cls = at(lc, px, py);
@@ -128,10 +174,20 @@ const VegGrid = L.GridLayer.extend({
   createTile(coords, done) {
     const tile = document.createElement("canvas");
     tile.width = tile.height = 256;
-    compose(coords, this.options.hidden)
-      .then((img) => {
-        tile.getContext("2d").putImageData(img, 0, 0);
+    if (!tileCovered(coords)) {
+      setTimeout(() => done(null, tile), 0);
+      return tile;
+    }
+    const hidden = this.options.hidden;
+    const draw = (lc, now, monthly) => tile.getContext("2d").putImageData(paint(lc, now, monthly, hidden), 0, 0);
+    // Draw forests and field crops as soon as the first two images arrive; the five monthly
+    // images (orchards) refine the same tile when they come in.
+    const monthly = monthlySources(coords);
+    baseSources(coords)
+      .then(([lc, now]) => {
+        draw(lc, now, null);
         done(null, tile);
+        return monthly.then((mon) => draw(lc, now, mon));
       })
       .catch((e) => done(e, tile));
     return tile;

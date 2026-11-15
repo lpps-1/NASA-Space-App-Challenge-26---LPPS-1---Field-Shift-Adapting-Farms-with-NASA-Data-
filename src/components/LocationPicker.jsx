@@ -52,7 +52,11 @@ const placeLine = (v) => [v.tehsil, v.district, v.province].filter(Boolean).join
  * United States: search for the nearest town; the state and county come with it.
  * `value` is the profile (or any object with the fields from locationPatch); `onChange(patch)` receives the fields to merge.
  */
-export default function LocationPicker({ value, onChange, className }) {
+/**
+ * `onCountryChange(id)`, when given, takes over the country switch (My farm saves it at once with a
+ * starter place); without it the switch only clears the place in the form (farm setup).
+ */
+export default function LocationPicker({ value, onChange, onCountryChange, className }) {
   const { t, lang } = useT();
   const country = value.country === "US" ? "US" : "PK";
   const done = useRef(null);
@@ -67,6 +71,7 @@ export default function LocationPicker({ value, onChange, className }) {
 
   const setCountry = (id) => {
     if (id === country) return;
+    if (onCountryChange) return onCountryChange(id);
     onChange({ ...locationPatch(null), country: id, province: "", province_id: null, village: "", current_crops: [], previous_crops: [], grow_types: [], rotation: "" });
   };
 

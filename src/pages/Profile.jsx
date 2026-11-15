@@ -7,7 +7,7 @@ import { estimateStage } from "@/lib/fieldStage";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import FormField, { PrimaryButton, inputClass } from "@/components/FormField";
-import { MAX_CROP_PICKS, SOIL_OPTIONS } from "@/data/fixtures";
+import { cropGroupsFor, MAX_CROP_PICKS, SOIL_OPTIONS } from "@/data/fixtures";
 import { CropChips, GoalPicker, IrrigationPicker } from "@/components/FarmChoices";
 import { deriveFarmFields } from "@/lib/farmSetup";
 import { usualSoil } from "@/lib/soil";
@@ -15,7 +15,19 @@ import LocationPicker from "@/components/LocationPicker";
 import { useFields, useProfile, useUpdateProfile } from "@/hooks/useKisanData";
 
 // Farm details the farmer edits here. Name, email and phone are account details: they live in Settings → Account.
-const EDITABLE = ["farm_name", "village", "preferred_language", "land_acres", "irrigation", "irrigation_methods", "soil_type", "crops",
+// A country switch on this page is saved at once, so the dashboard, rotation planner, map and
+// Kisan AI all follow it. Each country keeps its own place and crops (profile.by_country), so
+// switching back restores them; the first switch starts from a typical farm the farmer can change.
+const COUNTRY_KEYS = ["province", "province_id", "division", "division_id", "district", "district_id", "tehsil", "lat", "lng", "village",
+  "current_crops", "previous_crops", "grow_types", "rotation", "crops", "soil_type", "planned_rotation", "planned_rotation_title"];
+const COUNTRY_START = {
+  PK: { province: "Punjab", province_id: "punjab", division: "Faisalabad", division_id: "punjab:faisalabad", district: "Faisalabad", district_id: "punjab/faisalabad", tehsil: null, lat: 31.4504, lng: 73.135,
+    village: "", current_crops: ["Wheat"], previous_crops: ["Cotton"], grow_types: [], rotation: "", crops: ["Wheat", "Cotton"], soil_type: "Loam", planned_rotation: "", planned_rotation_title: "" },
+  US: { province: "Iowa", province_id: null, division: null, division_id: null, district: "Story County", district_id: null, tehsil: "Ames", lat: 42.0347, lng: -93.6199,
+    village: "", current_crops: ["Corn"], previous_crops: ["Soybean"], grow_types: [], rotation: "", crops: ["Corn", "Soybean"], soil_type: "Loam", planned_rotation: "", planned_rotation_title: "" },
+};
+
+const EDITABLE = ["country", "farm_name", "village", "preferred_language", "land_acres", "irrigation", "irrigation_methods", "soil_type", "crops",
   "current_crops", "previous_crops", "rotation", "rotation_note", "goals", "goal_note",
   "province", "province_id", "division", "division_id", "district", "district_id", "tehsil", "lat", "lng"];
 
@@ -29,6 +41,18 @@ export default function Profile() {
   const merge = useCallback((patch) => setForm((prev) => ({ ...prev, ...patch })), []);
   if (!form) return <div className="kisan-card h-96 animate-pulse" />;
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
+  // Crop choices follow the country (corn and soybean for US farms, not cotton and sugarcane).
+  const cropOptions = Object.values(cropGroupsFor(form.country)).flat();
+
+  const switchCountry = async (id) => {
+    const from = form.country === "US" ? "US" : "PK";
+    const stash = { ...(form.by_country || {}), [from]: Object.fromEntries(COUNTRY_KEYS.map((k) => [k, form[k] ?? null])) };
+    const saved = await save.mutateAsync({ ...(stash[id] || COUNTRY_START[id]), country: id, by_country: stash });
+    setForm(saved);
+    const place = [saved.tehsil, saved.district, saved.province].filter(Boolean).join(", ");
+    toast.success(t("Country changed to {country}. The whole app now uses {place}. Set your own place and crops below.", { country: id === "US" ? t("United States") : t("Pakistan"), place }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -60,7 +84,7 @@ export default function Profile() {
               className="sm:col-span-2"
               data-testid="farm-name-input"
             />
-            <LocationPicker value={form} onChange={merge} className="sm:col-span-2" />
+            <LocationPicker value={form} onChange={merge} onCountryChange={switchCountry} className="sm:col-span-2" />
             <FormField label={t("Village / Chak")} value={form.village} onChange={set("village")} />
             <FormField label={t("Total land (acres)")} type="number" step="0.5" value={form.land_acres} onChange={set("land_acres")} />
             <FormField label={t("Soil type")}>
@@ -81,11 +105,11 @@ export default function Profile() {
             <span className="block text-base font-semibold">{t("Crops")}</span>
           <div className="space-y-2">
             <span className="block text-sm font-medium">{t("In your fields now")}</span>
-            <CropChips label="Crops in the field now" max={MAX_CROP_PICKS} value={form.current_crops || []} onChange={(v) => merge({ current_crops: v })} />
+            <CropChips label="Crops in the field now" max={MAX_CROP_PICKS} options={cropOptions} value={form.current_crops || []} onChange={(v) => merge({ current_crops: v })} />
           </div>
           <div className="space-y-2">
             <span className="block text-sm font-medium">{t("Last season")}</span>
-            <CropChips label="Crops last season" max={MAX_CROP_PICKS} value={form.previous_crops || []} onChange={(v) => merge({ previous_crops: v })} />
+            <CropChips label="Crops last season" max={MAX_CROP_PICKS} options={cropOptions} value={form.previous_crops || []} onChange={(v) => merge({ previous_crops: v })} />
           </div>
           </fieldset>
           <div className="space-y-2 border-t pt-6 [border-color:var(--card-line)]">

@@ -256,7 +256,7 @@ export default function FarmMap({ className }) {
       </div>
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-      <div className="relative h-[26rem] overflow-hidden rounded-xl border [border-color:var(--card-line)] sm:h-[30rem]">
+      <div className="relative isolate z-0 h-[26rem] overflow-hidden rounded-xl border [border-color:var(--card-line)] sm:h-[30rem]">
         <MapContainer
           {...(start.bounds ? { bounds: start.bounds } : { center: start.center, zoom: start.zoom })}
           minZoom={3}
