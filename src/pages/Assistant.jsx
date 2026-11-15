@@ -299,7 +299,7 @@ export default function Assistant() {
   const listenMode = LISTEN_MODES[settings?.listen_mode] ? settings.listen_mode : "patient";
   listenRef.current = { mode: listenMode, bargeIn: settings?.barge_in !== false };
   const ttsOptionsRef = useRef({});
-  ttsOptionsRef.current = { voiceURI: settings?.tts_voice || "", rate: settings?.speech_rate || 1, cloudVoice: settings?.cloud_urdu_voice === true };
+  ttsOptionsRef.current = { voiceURI: settings?.tts_voice || "", rate: settings?.speech_rate || 1, cloudVoice: settings?.online_urdu_voice !== false };
   const caps = useSpeechCaps(settings?.tts_voice || "");
 
   const speaker = useMemo(

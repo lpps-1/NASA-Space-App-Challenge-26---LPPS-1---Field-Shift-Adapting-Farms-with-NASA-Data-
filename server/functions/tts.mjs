@@ -87,7 +87,13 @@ export function wav(samples, rate) {
 }
 
 const CUES = [(t) => `TTS the following text, word for word: "${t}"`, (t) => `Read aloud: "${t}"`];
-const CHECK_MODEL = process.env.KISAN_TTS_CHECK_MODEL || "gemini-3-flash-preview"; // same model as /api/transcribe
+// Models that listen to the clip to check it. The Lite models come first: they have their own
+// free quota, so the check doesn't use up voice recognition's (/api/transcribe) main model.
+const CHECK_MODELS = (process.env.KISAN_TTS_CHECK_MODEL || "gemini-3.5-flash-lite,gemini-flash-lite-latest,gemini-3.5-flash,gemini-3-flash-preview")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
+const busy = (err) => [429, 500, 503].includes(err?.status) || /RESOURCE_EXHAUSTED|quota|overloaded|UNAVAILABLE/i.test(err?.message || "");
 
 /** Letters and digits only, so punctuation and spacing don't count as differences. */
 const words = (t) =>
@@ -108,11 +114,21 @@ const words = (t) =>
 async function saysText(samples, rate, text) {
   try {
     const audio = wav(resample(samples, rate, OUT_RATE), OUT_RATE).toString("base64");
-    const res = await gemini().models.generateContent({
-      model: CHECK_MODEL,
-      contents: [{ role: "user", parts: [{ inlineData: { mimeType: "audio/wav", data: audio } }, { text: "Transcribe this speech exactly, in the script it is spoken in. Output only the words." }] }],
-      config: { abortSignal: AbortSignal.timeout(20000) },
-    });
+    let res, lastErr;
+    for (const model of CHECK_MODELS) {
+      try {
+        res = await gemini().models.generateContent({
+          model,
+          contents: [{ role: "user", parts: [{ inlineData: { mimeType: "audio/wav", data: audio } }, { text: "Transcribe this speech exactly, in the script it is spoken in. Output only the words." }] }],
+          config: { abortSignal: AbortSignal.timeout(15000) },
+        });
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (!busy(err) && err?.status !== 404) throw err;
+      }
+    }
+    if (!res) throw lastErr;
     const heard = words(res.text || "");
     const want = words(text);
     if (!want.length) return true;

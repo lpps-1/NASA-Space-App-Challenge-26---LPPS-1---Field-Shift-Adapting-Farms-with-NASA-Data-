@@ -445,6 +445,3 @@
   .kisan-pop, .kisan-sheet, .kisan-fade, .wx-draw, .kisan-grow, .kisan-dialog, .kisan-overlay, .kisan-drawer, .kisan-menu, .task-tick, .task-leave { animation: none; }
   .wx-path { transition: none; }
 }
-
-/* Country borders from NASA GIBS, shown in grey (the Pakistan/US border is drawn in gold on top). */
-.kisan-borders { filter: grayscale(1) brightness(1.15); }

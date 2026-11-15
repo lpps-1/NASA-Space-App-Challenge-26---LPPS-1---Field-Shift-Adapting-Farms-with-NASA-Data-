@@ -642,7 +642,7 @@ function audioEl() {
 /** True when an Urdu-family reply should use the cloud voice on this device. */
 function wantsCloud(lang, opts, synthesize) {
   if (!synthesize || !CLOUD_LANGS.has(lang)) return false;
-  if (!opts.cloudVoice) return false; // the online Gemini voice is opt-in (Settings → Voice assistant)
+  if (!opts.cloudVoice) return false; // on by default when the device has no Urdu voice; Settings → Voice assistant turns it off
   if (opts.voiceURI) return false; // a voice chosen in Settings always wins
   return urduVoicePlan().mode !== "native";
 }

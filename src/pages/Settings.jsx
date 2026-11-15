@@ -34,7 +34,7 @@ function VoiceSettings({ s, set }) {
       lang,
       prepare: (t, target) => kisan.services.speechText(t, target),
       synthesize: (t) => kisan.services.speechAudio(t),
-      getOptions: () => ({ voiceURI: s.tts_voice, rate, cloudVoice: s.cloud_urdu_voice === true }),
+      getOptions: () => ({ voiceURI: s.tts_voice, rate, cloudVoice: s.online_urdu_voice !== false }),
       onBlocked: () => toast.error(t("The browser blocked speech. Tap the button again.")),
       onCloudError: () => toast.warning(t("Urdu voice isn't available right now"), { description: t("The online Urdu voice didn't answer. Try again in a minute.") }),
       onEnd: (r) => {
@@ -50,7 +50,7 @@ function VoiceSettings({ s, set }) {
           <p className="text-sm font-medium">{t("Urdu reply voice")}</p>
           <p className="text-xs text-muted-foreground">
             {plan.mode === "native" && t("Using {name}, a native Urdu voice.", { name: plan.voice.name })}
-            {plan.mode !== "native" && !s.tts_voice && (s.cloud_urdu_voice
+            {plan.mode !== "native" && !s.tts_voice && (s.online_urdu_voice
               ? t("Kisan AI speaks Urdu with the online Gemini voice, and with this device's voice when that isn't available.")
               : plan.mode === "hindi"
                 ? t("This device has no Urdu voice, so a Hindi voice reads the Urdu words. Microsoft Edge has natural Pakistani Urdu voices built in.")
@@ -77,8 +77,8 @@ function VoiceSettings({ s, set }) {
       <Toggle
         label={t("Online Urdu voice (Gemini)")}
         description={t("A more natural Pakistani Urdu voice on computers without one. The free Gemini plan allows only a few answers a day, and every clip is checked before it plays, so answers start a few seconds later.")}
-        checked={s.cloud_urdu_voice === true}
-        onChange={set("cloud_urdu_voice")}
+        checked={s.online_urdu_voice !== false}
+        onChange={set("online_urdu_voice")}
       />
       <div className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>

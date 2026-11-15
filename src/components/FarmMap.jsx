@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Polygon, Rectangle, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Rectangle, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Check, Eye, EyeOff, Globe2, LocateFixed, Mountain, Plus, Satellite, TriangleAlert, X } from "lucide-react";
 import { useProfile, useSlopeGrid, useTerrain } from "@/hooks/useKisanData";
 import VegetationLayer from "@/components/map/VegetationLayer";
+import MaskedTileLayer from "@/components/map/MaskedTileLayer";
 import { useT } from "@/i18n";
 import { useTheme } from "@/hooks/useTheme";
 import COVERED from "@/data/coveredCountries.json";
@@ -89,49 +90,12 @@ export const NASA_LAYERS = [
 ];
 
 
-// Only Pakistan and the United States are covered: everything else is lightly dimmed with a mask
-// (the whole world as one polygon, with the two countries cut out as holes).
-const swap = (ring) => ring.map(([lng, lat]) => [lat, lng]);
-const HOLES = COVERED.features.flatMap((f) =>
-  f.geometry.type === "Polygon" ? [swap(f.geometry.coordinates[0])] : f.geometry.coordinates.map((poly) => swap(poly[0]))
-);
-const WORLD = [
-  [-89.9, -360],
-  [89.9, -360],
-  [89.9, 360],
-  [-89.9, 360],
-];
 const VIEW = {
   // The US outline includes the Aleutian islands across the 180° line, so its own bounds span the
   // whole world. The view button shows the lower 48 states instead.
   US: L.latLngBounds([24.3, -125], [49.5, -66.9]),
 };
 const boundsOf = (id) => VIEW[id] || L.geoJSON(COVERED.features.find((f) => f.properties.id === id)).getBounds();
-
-/**
- * Satellite data is shown only inside Pakistan and the United States: the data pane is clipped to
- * their outlines (in layer pixels, redone after every zoom). Other countries keep the plain base map
- * with grey borders.
- */
-function DataPane() {
-  const map = useMap();
-  if (!map.getPane("kisanData")) {
-    const p = map.createPane("kisanData");
-    p.style.zIndex = 250;
-    p.style.pointerEvents = "none";
-  }
-  useEffect(() => {
-    const pane = map.getPane("kisanData");
-    const clip = () => {
-      const d = HOLES.map((ring) => "M" + ring.map((ll) => { const pt = map.latLngToLayerPoint(ll); return `${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`; }).join("L") + "Z").join("");
-      pane.style.clipPath = `path('${d}')`;
-    };
-    clip();
-    map.on("zoomend viewreset", clip);
-    return () => map.off("zoomend viewreset", clip);
-  }, [map]);
-  return null;
-}
 
 /** Moves the map when a view button is pressed. */
 function FlyTo({ target }) {
@@ -212,7 +176,8 @@ export default function FarmMap({ className }) {
       ? "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png"
       : "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg";
   const labels = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels_15m/default/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png";
-  const viewBtn = "inline-flex items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur hover:bg-card focus-ring";
+  // No backdrop blur on things that float over the map: blurring a moving map is slow.
+  const viewBtn = "inline-flex items-center gap-1.5 rounded-lg bg-card/95 px-2.5 py-1.5 text-xs font-medium shadow-sm hover:bg-card focus-ring";
 
   return (
     <section className={cn("kisan-card p-5 sm:p-6", className)} aria-labelledby="farm-map-title" data-testid="farm-map">
@@ -265,6 +230,7 @@ export default function FarmMap({ className }) {
           scrollWheelZoom="center"
           wheelPxPerZoomLevel={120}
           zoomSnap={1}
+          preferCanvas
           className="h-full w-full bg-secondary"
           attributionControl
         >
@@ -272,15 +238,14 @@ export default function FarmMap({ className }) {
           {active.map((l) => {
             const z = 200 + STACK.indexOf(l.id) * 10;
             return l.composite ? (
-              <VegetationLayer key={l.id} opacity={opacity} zIndex={z} pane="kisanData" hidden={vegHidden} />
+              <VegetationLayer key={l.id} opacity={opacity} zIndex={z} hidden={vegHidden} />
             ) : (
-              <TileLayer key={l.id} pane="kisanData" url={l.url} opacity={opacity} zIndex={z} maxNativeZoom={l.max} maxZoom={19} attribution="NASA GIBS / EOSDIS" className="kisan-data-tiles" />
+              <MaskedTileLayer key={l.id} url={l.url} opacity={opacity} zIndex={z} maxNativeZoom={l.max} attribution="NASA GIBS / EOSDIS" />
             );
           })}
-          {/* Countries the app doesn't cover yet: the base map stays visible (lightly dimmed), with
-              grey borders and no satellite data (the data pane is clipped to PK + US). */}
-          <Polygon positions={[WORLD, ...HOLES]} pathOptions={{ stroke: false, fillColor: theme === "dark" ? "#1f2523" : "#a3aaa7", fillOpacity: 0.3 }} interactive={false} />
-          <TileLayer url={GIBS("Reference_Features_15m", "GoogleMapsCompatible_Level13")} maxNativeZoom={13} maxZoom={19} opacity={0.55} zIndex={640} className="kisan-borders" />
+          {/* Countries the app doesn't cover yet: the base map stays visible with grey borders and no
+              satellite data (each data tile is cut to PK + US when it is drawn: coverMask.js). */}
+          <MaskedTileLayer url={GIBS("Reference_Features_15m", "GoogleMapsCompatible_Level13")} mask={false} filter="grayscale(1) brightness(1.15)" maxNativeZoom={13} opacity={0.55} zIndex={640} />
           <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
           <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
           {hasPoint && (
@@ -304,7 +269,6 @@ export default function FarmMap({ className }) {
                 </Rectangle>
               );
             })}
-          <DataPane />
           <FlyTo target={target} />
           {/* Map scale (like Google Maps): metric and miles. */}
           <ScaleControl position="bottomright" imperial metric />
@@ -341,7 +305,7 @@ export default function FarmMap({ className }) {
           </button>
         </div>
         {/* On wide screens the note sits on the map; on phones it goes under it, clear of the scale bar. */}
-        <p className="pointer-events-none absolute bottom-7 start-2 z-[500] hidden max-w-[60%] items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1.5 text-[11px] shadow-sm backdrop-blur md:flex" data-testid="coverage-note">
+        <p className="pointer-events-none absolute bottom-7 start-2 z-[500] hidden max-w-[60%] items-center gap-1.5 rounded-lg bg-card/95 px-2.5 py-1.5 text-[11px] shadow-sm md:flex" data-testid="coverage-note">
           <Globe2 className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
           {t("Kisan AI covers Pakistan and the United States only. Other countries show with grey borders and no satellite data.")}
         </p>

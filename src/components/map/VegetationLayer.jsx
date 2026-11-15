@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { colorTable } from "@/lib/gibsColormaps";
+import { clipToCovered, tileTouchesCovered } from "@/components/map/coverMask";
 
 /**
  * "Vegetation types" map layer: forests, field crops and orchards in different colours, and
@@ -101,23 +102,6 @@ function source(layer, time, maxZ, table, { x, y, z }, matrix = maxZ) {
 }
 const at = (s, px, py) => (s ? s.arr[Math.floor(s.oy + py / s.f) * 256 + Math.floor(s.ox + px / s.f)] : NaN);
 
-// Data is only shown inside Pakistan and the United States (the pane is clipped to them), so tiles
-// that lie wholly outside these boxes are left empty without downloading anything.
-const COVERED_BOXES = [
-  [23.4, 60.8, 37.2, 77.9], // Pakistan: south, west, north, east
-  [24.3, -125.1, 49.5, -66.8], // US lower 48
-  [51, -180, 71.6, -129.9], // Alaska
-  [18.8, -160.4, 22.4, -154.7], // Hawaii
-];
-function tileCovered({ x, y, z }) {
-  const n = 2 ** z;
-  const xw = ((x % n) + n) % n;
-  const lng = (t) => (t / n) * 360 - 180;
-  const lat = (t) => (Math.atan(Math.sinh(Math.PI * (1 - (2 * t) / n))) * 180) / Math.PI;
-  const w = lng(xw), e = lng(xw + 1), north = lat(y), south = lat(y + 1);
-  return COVERED_BOXES.some(([s, bw, nn, be]) => south < nn && north > s && w < be && e > bw);
-}
-
 /** The two images every tile needs (land cover + greenness now): enough for forests and field crops. */
 const baseSources = (coords) =>
   Promise.all([
@@ -174,12 +158,16 @@ const VegGrid = L.GridLayer.extend({
   createTile(coords, done) {
     const tile = document.createElement("canvas");
     tile.width = tile.height = 256;
-    if (!tileCovered(coords)) {
+    if (!tileTouchesCovered(coords)) {
       setTimeout(() => done(null, tile), 0);
       return tile;
     }
     const hidden = this.options.hidden;
-    const draw = (lc, now, monthly) => tile.getContext("2d").putImageData(paint(lc, now, monthly, hidden), 0, 0);
+    const draw = (lc, now, monthly) => {
+      const ctx = tile.getContext("2d");
+      ctx.putImageData(paint(lc, now, monthly, hidden), 0, 0);
+      clipToCovered(ctx, coords); // nothing is drawn outside Pakistan and the United States
+    };
     // Draw forests and field crops as soon as the first two images arrive; the five monthly
     // images (orchards) refine the same tile when they come in.
     const monthly = monthlySources(coords);
@@ -194,10 +182,10 @@ const VegGrid = L.GridLayer.extend({
   },
 });
 
-export default function VegetationLayer({ opacity = 1, zIndex = 300, pane = "tilePane", hidden = [] }) {
+export default function VegetationLayer({ opacity = 1, zIndex = 300, hidden = [] }) {
   const map = useMap();
   useEffect(() => {
-    const layer = new VegGrid({ opacity, maxZoom: 19, attribution: "NASA GIBS: MODIS land cover + MODIS NDVI", className: "kisan-data-tiles", zIndex, pane, hidden: new Set(hidden) });
+    const layer = new VegGrid({ opacity, maxZoom: 19, attribution: "NASA GIBS: MODIS land cover + MODIS NDVI", className: "kisan-data-tiles", zIndex, maxNativeZoom: 9, updateWhenZooming: false, keepBuffer: 1, hidden: new Set(hidden) });
     layer.addTo(map);
     return () => layer.remove();
   }, [map]); // opacity is updated by the effect below without rebuilding the tiles
