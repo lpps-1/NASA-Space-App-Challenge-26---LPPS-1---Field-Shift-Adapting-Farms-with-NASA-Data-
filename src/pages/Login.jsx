@@ -59,7 +59,12 @@ export default function Login() {
         {error && <p role="alert" className="text-sm text-alert">{error}</p>}
         <PrimaryButton disabled={busy}>{busy ? t("Signing in…") : t("Sign in")}</PrimaryButton>
       </form>
-      <button onClick={demo} disabled={busy} className="mt-4 w-full rounded-xl py-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-ring">
+      {/* Bright yellow so judges (NASA Space Apps) spot the demo at once. */}
+      <button
+        onClick={demo}
+        disabled={busy}
+        className="mt-4 w-full rounded-xl bg-[#FFD60A] px-4 py-3 text-sm font-bold text-[#123D2A] shadow-[0_0_0_3px_rgba(255,214,10,0.35),0_8px_24px_-6px_rgba(255,214,10,0.6)] transition hover:bg-[#FFE34D] hover:shadow-[0_0_0_4px_rgba(255,214,10,0.5),0_10px_28px_-6px_rgba(255,214,10,0.75)] active:scale-[0.99] disabled:opacity-60 focus-ring"
+      >
         {t("Just looking? Explore the demo farm")}
       </button>
     </AuthLayout>
