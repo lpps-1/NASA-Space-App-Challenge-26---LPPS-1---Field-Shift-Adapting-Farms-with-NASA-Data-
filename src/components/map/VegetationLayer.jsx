@@ -3,6 +3,7 @@ import { useMap } from "react-leaflet";
 import L from "leaflet";
 import { colorTable } from "@/lib/gibsColormaps";
 import { clipToCovered, tileTouchesCovered } from "@/components/map/coverMask";
+import { loadImage } from "@/components/map/loadImage";
 
 /**
  * "Vegetation types" map layer: forests, field crops and orchards in different colours, and
@@ -54,15 +55,15 @@ function values(url, table) {
     const cmap = numericTable(table);
     decoded.set(
       url,
-      new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
+      loadImage(url).then(
+        (img) => {
+          if (!img) return null; // GIBS has no image for this tile
           try {
             const c = document.createElement("canvas");
             c.width = c.height = 256;
             const g = c.getContext("2d", { willReadFrequently: true });
             g.drawImage(img, 0, 0, 256, 256);
+            img.close?.();
             const px = g.getImageData(0, 0, 256, 256).data;
             const out = new Float32Array(256 * 256);
             let lastKey = -1, lastVal = NaN; // neighbouring pixels usually share a colour
@@ -79,14 +80,17 @@ function values(url, table) {
               }
               out[i] = lastVal;
             }
-            resolve(out);
+            return out;
           } catch {
-            resolve(null);
+            return null;
           }
-        };
-        img.onerror = () => resolve(null);
-        img.src = url;
-      }),
+        },
+        () => {
+          // Failed even after retries (network): forget it, so the next tile or view asks again.
+          decoded.delete(url);
+          return null;
+        },
+      ),
     );
   }
   return decoded.get(url);

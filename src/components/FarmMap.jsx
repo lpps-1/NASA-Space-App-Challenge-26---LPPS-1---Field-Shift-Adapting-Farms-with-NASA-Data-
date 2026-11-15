@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, GeoJSON, MapContainer, Rectangle, ScaleControl, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Rectangle, ScaleControl, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Check, Eye, EyeOff, Globe2, LocateFixed, Mountain, Plus, Satellite, TriangleAlert, X } from "lucide-react";
@@ -169,13 +169,14 @@ export default function FarmMap({ className }) {
   const [target, setTarget] = useState(null);
   const home = profile?.country === "US" ? "US" : "PK";
   const start = useMemo(() => (hasPoint ? { center: [profile.lat, profile.lng], zoom: 7 } : { bounds: boundsOf(home) }), [hasPoint, profile?.lat, profile?.lng, home]);
-  // Background maps from NASA GIBS too (no key needed, unlike most map services):
-  // Blue Marble relief in light mode, Black Marble (Earth at night) in dark mode.
-  const base =
-    theme === "dark"
-      ? "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png"
-      : "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg";
-  const labels = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/Reference_Labels_15m/default/default/GoogleMapsCompatible_Level13/{z}/{y}/{x}.png";
+  // Background map from NASA GIBS too (no key needed, unlike most map services): the daytime Blue
+  // Marble with relief in both themes, a little darker in dark mode. (Dark mode used Black Marble,
+  // Earth at night: Pakistan's farmland was black and only city lights showed.)
+  const base = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg";
+  const baseFilter = theme === "dark" ? "brightness(0.72) saturate(0.9)" : null;
+  // Place names and borders: the "_15m" versions of these GIBS layers now return empty tiles at every
+  // zoom (checked 15 Nov), so the map had no borders or names. The standard versions (to zoom 9) work.
+  const labels = GIBS("Reference_Labels", "GoogleMapsCompatible_Level9");
   // No backdrop blur on things that float over the map: blurring a moving map is slow.
   const viewBtn = "inline-flex items-center gap-1.5 rounded-lg bg-card/95 px-2.5 py-1.5 text-xs font-medium shadow-sm hover:bg-card focus-ring";
 
@@ -234,7 +235,8 @@ export default function FarmMap({ className }) {
           className="h-full w-full bg-secondary"
           attributionControl
         >
-          <TileLayer key={base} url={base} maxNativeZoom={8} maxZoom={19} attribution="NASA Blue Marble / Black Marble (GIBS)" />
+          {/* Every GIBS layer loads through loadImage.js, which retries failed tiles (no grey holes). */}
+          <MaskedTileLayer url={base} mask={false} filter={baseFilter} maxNativeZoom={8} zIndex={100} attribution="NASA Blue Marble (GIBS)" />
           {active.map((l) => {
             const z = 200 + STACK.indexOf(l.id) * 10;
             return l.composite ? (
@@ -245,8 +247,8 @@ export default function FarmMap({ className }) {
           })}
           {/* Countries the app doesn't cover yet: the base map stays visible with grey borders and no
               satellite data (each data tile is cut to PK + US when it is drawn: coverMask.js). */}
-          <MaskedTileLayer url={GIBS("Reference_Features_15m", "GoogleMapsCompatible_Level13")} mask={false} filter="grayscale(1) brightness(1.15)" maxNativeZoom={13} opacity={0.55} zIndex={640} />
-          <TileLayer url={labels} maxNativeZoom={13} maxZoom={19} minZoom={4} opacity={0.85} zIndex={650} />
+          <MaskedTileLayer url={GIBS("Reference_Features", "GoogleMapsCompatible_Level9")} mask={false} filter="grayscale(1) brightness(1.15)" maxNativeZoom={9} opacity={0.7} zIndex={640} />
+          <MaskedTileLayer url={labels} mask={false} maxNativeZoom={9} minZoom={4} opacity={0.9} zIndex={650} />
           <GeoJSON data={COVERED} style={{ color: "#F2C94C", weight: 1.5, fill: false }} interactive={false} />
           {hasPoint && (
             <CircleMarker center={[profile.lat, profile.lng]} radius={7} pathOptions={{ color: "#F2C94C", weight: 3, fillColor: "#123D2A", fillOpacity: 1 }}>

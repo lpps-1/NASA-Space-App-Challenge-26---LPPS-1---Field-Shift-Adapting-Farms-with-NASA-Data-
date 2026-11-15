@@ -37,7 +37,26 @@ This file is how they tell each other what was done last and what is left.
 
 **History rewrite (14 Nov, after the eighth round) — Abdullah's Claude, read this:** the 11 first commits were wrongly titled "Prototype part N/11 (pre-event)". All this work was done during the hackathon, offline, and pushed later because of poor internet. They are now "Part N/11: …" and their descriptions say so. Dates, authors and files are unchanged, but **every commit ID changed** and `main`, `majid` and `abdullah` were force-pushed. Before any work: `git fetch origin` then `git reset --hard origin/abdullah` (commit or stash local work first, then reapply it). **Never push from an old copy**, or the old titles come back. Commit IDs in this file and `abdullah_handoff.md` were updated to the new ones. README note and task 8 reworded to match.
 
-**Last task done:** Google (Gemini) online voice off by default: it sounds Indian (15 Nov, evening)
+**Last task done:** full diagnostic + satellite map display fixed (15 Nov, night)
+- **Diagnostic:** `npm test`, lint and build pass. All 7 app pages render in the preview with no console errors. The map was checked at desktop and phone width, for Pakistan and the US view, and each of the 6 layers alone.
+- **Map problems found and fixed:**
+  1. **Grey holes.** A tile that failed once (network blip, slow GIBS) was never retried. The vegetation layer also cached a failed image as "no data" for the whole visit. New `src/components/map/loadImage.js`:
+     - fetch + `createImageBitmap`;
+     - network errors and 5xx/429 retried up to 4 times with back-off;
+     - waits while offline;
+     - 4xx (no image) returns null without retrying;
+     - final failure rejects, and `VegetationLayer` then drops the cache entry;
+     - 15 s limit per try (some GIBS requests hung for 5 minutes).
+     `MaskedTileLayer` and `VegetationLayer` both use it. Off-screen tiles stop downloading (`tileunload` aborts).
+  2. **Slow loading.** GIBS is HTTP/1.1, so the browser allows 6 connections per host. The map needs about 120 images (vegetation uses 7 per tile), which took 20–30 s or stalled. `spreadHost()` spreads tiles over gibs, gibs-a and gibs-b (all send CORS headers; gibs-c took 67 s, so it isn't used), with the same tile always on the same host. A retry moves to the next host. Measured afterwards, the Pakistan view filled in about 5 s (part may be cache).
+  3. **Night base map.** Dark mode used `VIIRS_Black_Marble` (Earth at night): Pakistan's farmland looked black and only Indian city lights showed. Both themes now use daytime `BlueMarble_ShadedRelief_Bathymetry`, dimmed with the canvas filter `brightness(0.72) saturate(0.9)` in dark mode. The base and labels are now `MaskedTileLayer` with `mask={false}`, so they get the retries too.
+  4. **No borders or place names.** GIBS `Reference_Labels_15m` and `Reference_Features_15m` now return fully transparent tiles at every zoom. Switched to `Reference_Labels` and `Reference_Features` on `GoogleMapsCompatible_Level9` (`maxNativeZoom` 9), which have content.
+- New `scripts/test-map.mjs` (8 checks on the loader with a fake network), added to `npm test` as `test:map`. Removed the unused eslint-disable in `MaskedTileLayer`.
+- **Not changed:**
+  - Vegetation still needs 7 images per tile, so a new region on a cold cache takes about 10–20 s to colour in.
+  - With several layers on at once, the opaque 9 km layers (soil moisture, heat) cover the vegetation below.
+
+**Before that:** Google (Gemini) online voice off by default: it sounds Indian (15 Nov, evening)
 - Majid still heard a Hindi accent after the device Hindi voice was removed. Tested `/api/tts` locally, with clips saved and transcribed:
   - Every English cue was **read out loud in English** before the Urdu: "TTS the following text, word for word" (the cue used until now, so the live site did this) and an accent instruction. The old clip check missed it because the transcriber skipped the English.
   - The plain Urdu text with no cue is read correctly (about 5 s, nothing extra), but a separate listen called the accent Indian and heard گندم as "gehun". No cue fixes Gemini's accent.

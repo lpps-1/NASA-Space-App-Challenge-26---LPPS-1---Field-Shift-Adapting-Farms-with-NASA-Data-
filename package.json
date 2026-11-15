@@ -16,7 +16,8 @@
     "test:profile": "node scripts/test-profile.mjs",
     "test:rotation": "node scripts/test-rotation.mjs",
     "test:i18n": "node scripts/test-i18n.mjs",
-    "test": "npm run test:language && npm run test:speech && npm run test:profile && npm run test:rotation && npm run test:i18n"
+    "test:map": "node scripts/test-map.mjs",
+    "test": "npm run test:language && npm run test:speech && npm run test:profile && npm run test:rotation && npm run test:i18n && npm run test:map"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
