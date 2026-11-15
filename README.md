@@ -2,7 +2,9 @@
 
 > **NASA Space Apps Challenge 2026 · Team LPPS-1 (Lahore) · Field Shift: Adapting Farms with NASA Data**
 
-A farming companion for Pakistani farmers. It has a dashboard with weather, fields and upcoming work. It also has a voice-enabled, agriculture-only AI assistant that answers farming questions in Urdu, Punjabi or English (and politely declines anything unrelated to farming), a farm calendar, farm calculators, a farmer profile, and an admin knowledge base.
+A farm decision-support tool for farmers in Pakistan and the United States. Its core is the **crop-rotation planner**: it compares the farmer's current rotation with the best 3 alternatives, scored on water, soil health, income, weather safety and fodder, using 20 years of NASA POWER climate, NASA satellite readings at the farm (SMAP soil moisture, GPM IMERG rain, MODIS greenness, land cover and ground heat, GRACE groundwater, SRTM slope, Landsat HLS imagery), government soil surveys and the farmer's own priorities. For each rotation it explains why it was suggested, the evidence, the benefits, what we don't know and the risks to check locally. It supports the farmer's judgment; it does not replace it.
+
+Around the planner there is a dashboard with weather, fields and upcoming work. It also has a voice-enabled, agriculture-only AI assistant that answers farming questions in Urdu, Punjabi or English (and politely declines anything unrelated to farming), a farm calendar, farm calculators, a farmer profile, and an admin knowledge base.
 
 Base44 is not a separate or earlier project. It is the same project: the app was started on Base44 during the hackathon, worked on offline, and pushed to GitHub later. It now runs fully independently, with no Base44 account, SDK, API key or hosted service involved.
 
@@ -47,7 +49,16 @@ If the key is missing or wrong, the chat says "Kisan AI isn't set up yet"; the r
 
 ## Accounts
 
-On Vercel, accounts are stored in the farmer's own browser (email + password), and **Explore the demo farm** always works. Online accounts and Google sign-in are not available on the Vercel deploy yet (the old code path in `src/lib/AuthContext.jsx` used Netlify Identity and falls back to browser accounts when it isn't there).
+On Vercel, accounts are stored in the farmer's own browser (email + password), and **Explore the demo farm** always works. **Google sign-in** works on Vercel once `VITE_GOOGLE_CLIENT_ID` is set: Google's account chooser opens in a popup and `/api/auth-google` checks the token with Google (`src/lib/googleSignIn.js`). There are no server-side accounts yet: farm data stays in the browser.
+
+## Use of AI (SI)
+
+As the Space Apps rules ask, here is where AI tools were used:
+
+- **Code and docs:** the team used **Claude Code** (Anthropic's Claude) as a coding assistant. It wrote and edited much of the code and these documents at the team's direction (see "Two Claudes and HANDOFF.md" below); many commits carry a `Co-Authored-By: Claude` line.
+- **Chat answers:** generated live by **Google Gemini**. The app says so on the Data sources page and in the Terms, and tells farmers to check important decisions locally.
+- **Speech:** speech-to-text, and the optional online Urdu voice (Settings → Voice assistant → "Online Urdu voice (Gemini)"), are made by **Google Gemini**. By default replies are read by the device's own voice.
+- **Not AI:** the rotation scores come from fixed rules in `src/lib/rotation.js` and the 20-year statistical check, not from a language model. The app has no AI-generated images or video.
 
 ## Farm setup
 

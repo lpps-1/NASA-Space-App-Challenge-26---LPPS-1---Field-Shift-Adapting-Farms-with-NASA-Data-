@@ -1,19 +1,23 @@
 # Feature Status
 
+Updated 15 Nov 2026. Hosting is Vercel; chat and voice run on Google Gemini.
+
 | Feature | Status | Notes |
 | --- | --- | --- |
+| Crop-rotation planner (`/rotation`) | ✅ Live | Current rotation + best 3, scored on water, soil, income, weather safety, fodder; why / evidence / benefits / gaps / risks; bare-field calendar; priority and climate what-if sliders; 20-year statistical check; machines and markets |
+| NASA data | ✅ Live | NASA POWER (20-year climate, last 30 days); SMAP, GPM IMERG, MODIS, GRACE read at the farm and used in the scores; SRTM slope and erosion hotspots; Landsat HLS field-scale image. ECOSTRESS not connected (stated on Data sources) |
+| Farm map | ✅ Live | NASA GIBS layers that toggle on/off, Vegetation types, erosion hotspots; Pakistan + US only |
+| Soil data | ✅ Live | USDA SSURGO live for US farms; Soil Survey of Pakistan / WAPDA province background |
 | Theme, light/dark, Urdu typography | ✅ Live | `index.css` from our first (Base44) version kept |
-| Sign in / register / forgot / reset | ✅ Live | Netlify Identity incl. Google sign-in (setup steps in README); local fallback + demo farm |
-| Farm setup after sign-in | ✅ Live | Land, water, crops, rotation, goals; used by Kisan AI |
-| Dashboard (greeting, weather, alerts, tasks, fields, recommendations) | ✅ Live | Live district weather |
-| Onboarding (language → location → farm) | ✅ Live | Saves to the local profile |
-| Kisan AI chat | ✅ Live | Claude via AI Gateway; agriculture-only scope (off-topic questions are politely declined) |
-| Voice input & spoken replies | ✅ Live | Browser Web Speech API (best in Chrome) |
-| Farm calendar (month view, add/complete/delete) | ✅ Live | Saved in the browser |
-| Tools: fertilizer, seed rate, irrigation, profit | ✅ Live | Rule-based calculators |
-| Tools: leaf photo diagnosis, Kisan card & loans | 🔜 Marked "Soon" | Milestones 5 & 6 |
-| Profile & fields management | ✅ Live | Saved in the browser |
-| Settings (voice, alerts, theme, reset) | ✅ Live | Alerts are preferences only |
-| Knowledge base admin (search, create, edit, delete) | ✅ Live | Admin-only nav item |
-| Server persistence, real auth | ⏳ Planned | See PLAN.md |
-| Mandi prices, SMS alerts | ❌ Removed | Dropped from the product. The profit calculator takes the farmer's own sale price |
+| Sign in / register / forgot / reset | ✅ Live | Browser (local) accounts + demo farm; Google sign-in on Vercel when `VITE_GOOGLE_CLIENT_ID` is set |
+| Farm setup after sign-in | ✅ Live | Pakistan or US; land, water, crops, rotation, goals; used by the planner and Kisan AI |
+| Dashboard | ✅ Live | Greeting with globe, rotation summary, weather and air quality, fields, jobs, recommendations |
+| Kisan AI chat | ✅ Live | Google Gemini, answers from the farm's NASA and survey data; agriculture-only; Urdu, Punjabi, English |
+| Voice input & spoken replies | ✅ Live | Gemini speech-to-text; device voice by default, optional Gemini Urdu voice |
+| Farm calendar | ✅ Live | Custom job types, notes, repeats; saved in the browser |
+| Tools: fertilizer, seed rate, profit, schemes | ✅ Live | Rule-based; follow the Pakistan / US switch |
+| Tools: irrigation planner, crop problem check | 🔜 Marked "Soon" | Shown at the bottom, switched off |
+| Data sources, Privacy, Terms | ✅ Live | Data sources page shows what is live and what the app doesn't know |
+| Knowledge base admin | ✅ Live | Admin-only nav item |
+| Server database, server accounts | ⏳ Planned | Farm data is in the browser only |
+| Mandi prices, SMS alerts | ❌ Removed | The profit calculator takes the farmer's own sale price |

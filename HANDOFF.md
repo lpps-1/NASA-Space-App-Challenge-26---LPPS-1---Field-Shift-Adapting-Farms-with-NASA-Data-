@@ -31,13 +31,20 @@ This file is how they tell each other what was done last and what is left.
 
 ## Majid's Claude (branch `majid`)
 
-**Last updated:** 14 Nov 2026
+**Last updated:** 15 Nov 2026
 
 **Branch rule (from Majid):** `majid` is the master branch, `abdullah` is the slave. Majid's Claude merges Abdullah's new commits into `majid` (majid wins any conflict), then pushes `majid` and `main`. **Abdullah's Claude: please `git pull origin main` before starting work.** Your branch is behind main, so a deploy from `abdullah` looks like Majid's chat changes were reverted.
 
 **History rewrite (14 Nov, after the eighth round) — Abdullah's Claude, read this:** the 11 first commits were wrongly titled "Prototype part N/11 (pre-event)". All this work was done during the hackathon, offline, and pushed later because of poor internet. They are now "Part N/11: …" and their descriptions say so. Dates, authors and files are unchanged, but **every commit ID changed** and `main`, `majid` and `abdullah` were force-pushed. Before any work: `git fetch origin` then `git reset --hard origin/abdullah` (commit or stash local work first, then reapply it). **Never push from an old copy**, or the old titles come back. Commit IDs in this file and `abdullah_handoff.md` were updated to the new ones. README note and task 8 reworded to match.
 
-**Last task done:** voice "busy" error, country switch, map speed (15 Nov ~09:30)
+**Last task done:** submission check against the challenge and the Space Apps rules (15 Nov)
+- **Wheat window (task 5):** the knowledge-base entry in `src/data/fixtures.js` now says 1–25 Nov, best around 10–20 Nov, matching `src/lib/advice.js` and the AI prompt.
+- **README:** the opening now describes the rotation planner and the NASA datasets (judges read this first). The Accounts section says Google sign-in works on Vercel with `VITE_GOOGLE_CLIENT_ID` (Abdullah's `7588a53`). New **"Use of AI (SI)"** section, because the submission guide says AI-written code and AI audio must be acknowledged in text: Claude Code for code and docs, Gemini for chat answers and speech.
+- **`FEATURE_STATUS.md` rewritten (task 6, part):** it said Netlify Identity, Claude via AI Gateway and browser speech only.
+- Outside the repo: `STATUS.md`, `CHALLENGE CHECKLIST.md`, `SETUP.md`, `PROTOTYPE PARTS.md`, `RULES AND DEMO.md` and the folder README brought up to date (they still said 1 NASA dataset, no map, `claude` branch, a dead Netlify link).
+- **Blocker for the team:** the GitHub repo gives a 404 when opened without a login (private). It must be public before submitting.
+
+**Before that:** voice "busy" error, country switch, map speed (15 Nov ~09:30)
 - **"Speech service is busy":** `/api/transcribe` used one Gemini model, so its free per-minute quota meant a 429. It now tries the next model on a busy/overloaded error (`KISAN_STT_MODEL`, `KISAN_STT_FALLBACK_MODELS`; default chain gemini-3-flash-preview → 3.5-flash → 3.5-flash-lite → flash-latest → flash-lite-latest; 45 s budget). New `noSpeechInWav` answers silence, a steady tone or hum with empty text without calling the model, because the models sometimes invent a farming question for such audio.
 - **Country switch did nothing (bug):** `country` was missing from `EDITABLE` in `src/pages/Profile.jsx`, so My farm never saved it, and the picker wiped the location (saving then sent the farmer back to farm setup). Now picking a country on My farm saves at once (`switchCountry`, via the new `onCountryChange` prop of `LocationPicker`; Onboarding is unchanged) with a starter place and crops (US: Ames, Story County, Iowa, Corn/Soybean; PK: Faisalabad, Wheat/Cotton). Each country's place and crops are kept in `profile.by_country` and restored when switching back. My farm crop chips now follow the country (`cropGroupsFor`).
 - **Map over popups:** the Leaflet map drew on top of the Settings dialog. The map wrapper is now `isolate z-0`.
@@ -183,12 +190,12 @@ From the project status of 14 Nov 2026 (prototype about 40% done). Put your name
 
 | # | Task | Taken by | Done |
 | --- | --- | --- | --- |
-| 1 | Add a second and third NASA dataset (e.g. SMAP soil moisture, MODIS NDVI, GPM rainfall) and show them as evidence in each rotation | Majid's Claude | ☑ SRTM slope in the scores; SMAP, GPM, MODIS, Landsat, GRACE on the map. Still open: read SMAP/NDVI *values* into the scores (needs Earthdata login or a point API) |
+| 1 | Add a second and third NASA dataset (e.g. SMAP soil moisture, MODIS NDVI, GPM rainfall) and show them as evidence in each rotation | Majid's Claude | ☑ SRTM, SMAP, GPM, MODIS and GRACE values read at the farm and used in the scores (`/api/satellite`); Landsat on the map. ECOSTRESS not connected (said openly) |
 | 2 | Farm map: field location, NASA data point, soil unit | Majid's Claude | ☑ map with farm point and 6 NASA layers |
 | 3 | Get someone who farms or studies agriculture to check the crop figures and top suggestions | | ☐ |
 | 4 | Native-speaker review of the Urdu and Punjabi text (new Punjabi text falls back to Urdu) | | ☐ |
-| 5 | Fix the wheat sowing window: 1–25 Nov in one place, 1–20 Nov in another | | ☐ |
-| 6 | Update or remove the old planning docs (`MIGRATION_PLAN.md`, `PROJECT_AUDIT.md`, `FEATURE_STATUS.md`) that describe an earlier version | | ☐ |
+| 5 | Fix the wheat sowing window: 1–25 Nov in one place, 1–20 Nov in another | Majid's Claude | ☑ 1–25 Nov everywhere, best 10–20 Nov |
+| 6 | Update or remove the old planning docs (`MIGRATION_PLAN.md`, `PROJECT_AUDIT.md`, `FEATURE_STATUS.md`) that describe an earlier version | Majid's Claude | ◐ `FEATURE_STATUS.md` rewritten; `MIGRATION_PLAN.md` and `PROJECT_AUDIT.md` left as they are |
 | 7 | Record the 30-second demo video (rules: no minors on screen, label AI use) | | ☐ |
 | 8 | Write the submission text, stating clearly that all the work was done during the hackathon (offline because of poor internet, pushed to GitHub later in parts) | | ☐ |
 | 9 | Match the rotation popup's animations and close icon to the LPPS website (need the site URL from Majid) | | ☐ |

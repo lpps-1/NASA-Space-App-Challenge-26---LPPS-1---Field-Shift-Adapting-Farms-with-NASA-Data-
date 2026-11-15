@@ -256,7 +256,7 @@ export const KNOWLEDGE = [
     language: "en",
     updated: "2026-10-28",
     status: "published",
-    body: "Sow wheat between 1 and 20 November for best yield. Use 50 kg seed per acre with a drill. Late sowing after 30 November reduces yield by roughly 15–20 kg per acre per day.",
+    body: "Sow wheat between 1 and 25 November, best around 10–20 November. Use 50 kg seed per acre with a drill. Late sowing after 30 November reduces yield by roughly 15–20 kg per acre per day.",
   },
   {
     id: "k2",
