@@ -86,13 +86,21 @@ export function wav(samples, rate) {
   return Buffer.concat([h, data]);
 }
 
-const CUES = [(t) => `TTS the following text, word for word: "${t}"`, (t) => `Read aloud: "${t}"`];
+// The Urdu text alone. Tested 15 Nov: every English cue we tried was read out loud in English before
+// the Urdu ("TTS the following text, word for word", "Speak as a native Pakistani Urdu speaker…"),
+// and that English is what sounded Indian. The plain text was read exactly (4.8 s, nothing extra).
+// The accent is set by languageCode ur-PK and checked afterwards (saysText); the second cue is only
+// a retry for when the model answers the text instead of reading it.
+const CUES = [(t) => t, (t) => `"${t}"`];
 // Models that listen to the clip to check it. The Lite models come first: they have their own
 // free quota, so the check doesn't use up voice recognition's (/api/transcribe) main model.
 const CHECK_MODELS = (process.env.KISAN_TTS_CHECK_MODEL || "gemini-3.5-flash-lite,gemini-flash-lite-latest,gemini-3.5-flash,gemini-3-flash-preview")
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
+const CHECK_PROMPT = `Transcribe every word in this audio, from the very first second to the end. Write Urdu/Hindi words in Urdu (Perso-Arabic) script, never Devanagari. Include any English words in English: do not skip anything. Then judge the speaker's accent.
+Answer as JSON: {"text": "<all the words>", "english": "<any English words spoken, or empty>", "accent": "pakistani" | "indian" | "unsure"}.
+"indian" means it sounds like Hindi or an Indian speaker (Indian intonation, Hindi pronunciation of Urdu sounds such as ق خ غ ز ف read as k kh g j ph). "pakistani" means it sounds like a native Urdu speaker from Pakistan.`;
 const busy = (err) => [429, 500, 503].includes(err?.status) || /RESOURCE_EXHAUSTED|quota|overloaded|UNAVAILABLE/i.test(err?.message || "");
 
 /** Letters and digits only, so punctuation and spacing don't count as differences. */
@@ -106,12 +114,22 @@ const words = (t) =>
     .filter(Boolean);
 
 /**
- * True when the audio says the text and nothing else: a speech-to-text pass must find most of the
- * words, in about the same amount. Catches the model reading the instruction aloud or making up
- * its own sentence. If the check itself fails (quota, timeout), the clip is NOT played: the browser
- * then uses the device's own voice, which is better than speaking the wrong words.
+ * True when the audio says the text and nothing else, in a Pakistani accent: a speech-to-text pass
+ * must find most of the words, in about the same amount, and must not hear an Indian/Hindi accent.
+ * Catches the model reading the instruction aloud, making up its own sentence, or sounding Indian.
+ * If the check itself fails (quota, timeout), the clip is NOT played.
  */
-async function saysText(samples, rate, text) {
+export async function saysText(samples, rate, text) {
+  // Model-free length check first: Urdu speech runs at about 12-15 letters a second, so a clip far
+  // longer than the text has something extra in it (e.g. the cue read out loud). Costs no quota.
+  const speechSec = samples.length / rate;
+  // A digit counts as several letters: "2026" is spoken as four words.
+  const letters = text.replace(/\s+/g, "").length + (text.match(/[0-9۰-۹]/g) || []).length * 4;
+  const maxSec = 2.5 + letters / 7;
+  if (speechSec > maxSec) {
+    console.error(`tts clip too long (${speechSec.toFixed(1)} s for ${text.length} chars), dropped`);
+    return false;
+  }
   try {
     const audio = wav(resample(samples, rate, OUT_RATE), OUT_RATE).toString("base64");
     let res, lastErr;
@@ -119,8 +137,8 @@ async function saysText(samples, rate, text) {
       try {
         res = await gemini().models.generateContent({
           model,
-          contents: [{ role: "user", parts: [{ inlineData: { mimeType: "audio/wav", data: audio } }, { text: "Transcribe this speech exactly, in the script it is spoken in. Output only the words." }] }],
-          config: { abortSignal: AbortSignal.timeout(15000) },
+          contents: [{ role: "user", parts: [{ inlineData: { mimeType: "audio/wav", data: audio } }, { text: CHECK_PROMPT }] }],
+          config: { responseMimeType: "application/json", abortSignal: AbortSignal.timeout(15000) },
         });
         break;
       } catch (err) {
@@ -129,7 +147,25 @@ async function saysText(samples, rate, text) {
       }
     }
     if (!res) throw lastErr;
-    const heard = words(res.text || "");
+    let out = {};
+    try {
+      out = JSON.parse(res.text || "{}");
+    } catch {
+      out = { text: res.text || "" };
+    }
+    // English words the answer doesn't contain = the cue was read out loud.
+    const latin = (t) => words(t).filter((w) => /^[a-z]+$/.test(w));
+    const ownLatin = new Set(latin(text));
+    const strayEnglish = [...latin(out.text || ""), ...latin(out.english || "")].filter((w) => !ownLatin.has(w));
+    if (strayEnglish.length > 1) {
+      console.error("tts clip has English that isn't in the text, dropped:", strayEnglish.slice(0, 8).join(" "));
+      return false;
+    }
+    if (out.accent === "indian" || /[ऀ-ॿ]/.test(out.text || "")) {
+      console.error("tts accent sounded Indian, clip dropped");
+      return false;
+    }
+    const heard = words(out.text || "");
     const want = words(text);
     if (!want.length) return true;
     const pool = new Map();
@@ -138,14 +174,16 @@ async function saysText(samples, rate, text) {
     for (const w of want) if (pool.get(w) > 0) { hit++; pool.set(w, pool.get(w) - 1); }
     const recall = hit / want.length;
     const extra = heard.length / want.length;
-    return recall >= 0.6 && extra <= 1.35;
+    const ok = recall >= 0.6 && extra <= 1.35;
+    if (!ok) console.error(`tts words off (recall ${recall.toFixed(2)}, extra ${extra.toFixed(2)}): ${String(out.text).slice(0, 120)}`);
+    return ok;
   } catch (err) {
     console.error("tts check failed", err?.status, String(err?.message || "").slice(0, 120));
     return false;
   }
 }
 
-async function synthesize(model, text, { withLanguage, cue = 0 }) {
+export async function synthesize(model, text, { withLanguage, cue = 0 }) {
   const res = await gemini().models.generateContent({
     model,
     // A short cue with the text in quotes. A long style line ("Say this in a warm, clear … voice") was

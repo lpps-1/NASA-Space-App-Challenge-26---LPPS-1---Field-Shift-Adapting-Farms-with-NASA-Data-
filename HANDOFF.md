@@ -37,7 +37,20 @@ This file is how they tell each other what was done last and what is left.
 
 **History rewrite (14 Nov, after the eighth round) — Abdullah's Claude, read this:** the 11 first commits were wrongly titled "Prototype part N/11 (pre-event)". All this work was done during the hackathon, offline, and pushed later because of poor internet. They are now "Part N/11: …" and their descriptions say so. Dates, authors and files are unchanged, but **every commit ID changed** and `main`, `majid` and `abdullah` were force-pushed. Before any work: `git fetch origin` then `git reset --hard origin/abdullah` (commit or stash local work first, then reapply it). **Never push from an old copy**, or the old titles come back. Commit IDs in this file and `abdullah_handoff.md` were updated to the new ones. README note and task 8 reworded to match.
 
-**Last task done:** Hindi voice removed completely (15 Nov, later)
+**Last task done:** Google (Gemini) online voice off by default: it sounds Indian (15 Nov, evening)
+- Majid still heard a Hindi accent after the device Hindi voice was removed. Tested `/api/tts` locally, with clips saved and transcribed:
+  - Every English cue was **read out loud in English** before the Urdu: "TTS the following text, word for word" (the cue used until now, so the live site did this) and an accent instruction. The old clip check missed it because the transcriber skipped the English.
+  - The plain Urdu text with no cue is read correctly (about 5 s, nothing extra), but a separate listen called the accent Indian and heard گندم as "gehun". No cue fixes Gemini's accent.
+- `server/functions/tts.mjs`:
+  - `CUES` is now the text alone (retry: the text in quotes).
+  - `saysText` (now exported) adds three checks: a model-free length check (`maxSec = 2.5 + letters/7`, digits count ×5); stray English words not in the text; an accent field in a JSON check (`indian`, or a Devanagari transcript, means the clip is dropped). It logs why a clip failed.
+  - The accent judgement is not reliable: the same clip passed it once and a separate listen called it Indian.
+- **Setting renamed:** `online_urdu_voice` (default on) became `gemini_urdu_voice` (default **off**, `=== true`), so users who had the old key saved as on are switched off too (`fixtures.js`, `Settings.jsx`, `Assistant.jsx`). The Settings toggle text now says it often sounds Indian and points to Edge.
+- **New toast in `Assistant.jsx`:** `onMissingVoice` shows "This device has no Pakistani Urdu voice … open in Microsoft Edge", once per visit. New strings are in `strings5.js`.
+- `voice.js`: removed `en-in` from the English voice preferences, so English replies never get an Indian English voice.
+- **Real Pakistani voices:** Microsoft ur-PK Uzma/Asad, built into Edge (device path), or the Azure Speech API, which needs a key. Not built yet.
+
+**Before that:** Hindi voice removed completely (15 Nov, later)
 - Majid: the accent still switched; "remove the hindi accent we dont have india as a region". Urdu and Punjabi replies are now spoken only by a Pakistani Urdu voice: the online Gemini voice, or the device's own Urdu / Shahmukhi Punjabi voice. With neither, the answer stays as text and the page says why. A Hindi voice is never used.
 - `src/lib/voice.js`: removed `hi` from `PREFS`/`BCP`, the `"hindi"` mode in `urduVoicePlan`, the Devanagari path in `planPiece` (`forHindiVoice`, `prepare(…, "hi")`) and the Hindi fallback for Gurmukhi. `urduCapableVoices()` lists only Urdu-reading voices, so Settings can't pick a Hindi voice (a saved Hindi `tts_voice` is ignored). In `pump`, any failure after the reply started online (`skip` or `expand`) now stops the reply (`stats.cut`).
 - `Assistant.jsx`: the "Speaking Urdu with this device's Hindi voice" toast is gone. `Settings.jsx`: Hindi messages replaced by "This device has no Urdu voice…" (new string in `strings5.js`). `urduTranslit.js` stays but nothing calls `urduToDevanagari` now.

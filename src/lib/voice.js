@@ -440,7 +440,7 @@ const PREFS = {
   // Only Shahmukhi Punjabi voices can read Punjabi in Urdu script. pa-IN voices read Gurmukhi.
   "pa-Arab": ["pa-pk", "pa-arab"],
   "pa-Guru": ["pa-in", "pa-guru", "pa"],
-  en: ["en-pk", "en-in", "en-gb", "en-us", "en"],
+  en: ["en-pk", "en-gb", "en-us", "en"], // never an Indian voice (the app covers Pakistan)
 };
 const BCP = { ur: "ur-PK", "pa-Guru": "pa-IN", en: "en-US" };
 

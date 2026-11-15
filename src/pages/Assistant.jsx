@@ -225,6 +225,7 @@ function useSpeechCaps(voiceURI) {
 export default function Assistant() {
   const { t, lang: uiLang } = useT();
   const tRef = useRef(t);
+  const missingToldRef = useRef(false); // "no Pakistani Urdu voice" is said once per visit
   tRef.current = t;
   tRef.uiLang = uiLang;
   const qc = useQueryClient();
@@ -299,7 +300,7 @@ export default function Assistant() {
   const listenMode = LISTEN_MODES[settings?.listen_mode] ? settings.listen_mode : "patient";
   listenRef.current = { mode: listenMode, bargeIn: settings?.barge_in !== false };
   const ttsOptionsRef = useRef({});
-  ttsOptionsRef.current = { voiceURI: settings?.tts_voice || "", rate: settings?.speech_rate || 1, cloudVoice: settings?.online_urdu_voice !== false };
+  ttsOptionsRef.current = { voiceURI: settings?.tts_voice || "", rate: settings?.speech_rate || 1, cloudVoice: settings?.gemini_urdu_voice === true };
   const caps = useSpeechCaps(settings?.tts_voice || "");
 
   const speaker = useMemo(
@@ -362,7 +363,15 @@ export default function Assistant() {
           });
         },
         getOptions: () => ttsOptionsRef.current,
-        onMissingVoice: () => {}, // a Hindi voice is never used; without an Urdu voice the answer stays as text
+        // A Hindi voice is never used: without a Pakistani Urdu voice the answer stays as text (said once).
+        onMissingVoice: (lang) => {
+          if (lang === "en" || missingToldRef.current) return;
+          missingToldRef.current = true;
+          toast.info(tRef.current("This device has no Pakistani Urdu voice"), {
+            description: tRef.current("Answers are shown as text. Open Kisan AI in Microsoft Edge to hear them in a Pakistani Urdu voice."),
+            duration: 9000,
+          });
+        },
       }),
     []
   );

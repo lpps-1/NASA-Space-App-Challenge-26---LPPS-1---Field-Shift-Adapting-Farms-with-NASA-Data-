@@ -182,7 +182,9 @@ export const DEFAULT_SETTINGS = {
   tts_voice: "", // voiceURI chosen in Settings; "" = pick the best Urdu voice automatically
   speech_rate: 1,
   yield_unit: "auto", // harvest weight: auto | maund | kg | lb
-  online_urdu_voice: true, // online Gemini Urdu/Punjabi voice when the device has none; free keys get ~10 clips a day per model
+  // Google's online voice reads Urdu with an Indian accent (tested 15 Nov), so it is off unless the farmer
+  // switches it on. New key: the old online_urdu_voice (saved as on for many users) is ignored.
+  gemini_urdu_voice: false,
   listen_mode: "patient", // "auto" (short pause ends the turn) | "patient" | "manual" (listen until the farmer taps stop)
   barge_in: true, // conversation mode: talking over Kisan AI interrupts it
   weather_alerts: true,
