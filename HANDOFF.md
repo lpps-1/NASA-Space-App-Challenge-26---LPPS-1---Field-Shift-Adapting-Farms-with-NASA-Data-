@@ -37,7 +37,10 @@ This file is how they tell each other what was done last and what is left.
 
 **History rewrite (14 Nov, after the eighth round) — Abdullah's Claude, read this:** the 11 first commits were wrongly titled "Prototype part N/11 (pre-event)". All this work was done during the hackathon, offline, and pushed later because of poor internet. They are now "Part N/11: …" and their descriptions say so. Dates, authors and files are unchanged, but **every commit ID changed** and `main`, `majid` and `abdullah` were force-pushed. Before any work: `git fetch origin` then `git reset --hard origin/abdullah` (commit or stash local work first, then reapply it). **Never push from an old copy**, or the old titles come back. Commit IDs in this file and `abdullah_handoff.md` were updated to the new ones. README note and task 8 reworded to match.
 
-**Last task done:** demo button bright yellow (15 Nov, night)
+**Last task done:** demo button restyled: clean, not flashy (15 Nov, night)
+- Majid: the glowing yellow button "looks too AI"; he wants it sleek and clean but still easy for the judges to spot. `Login.jsx`: the glow ring and big shadow are gone. It is now a flat solid yellow (`#F5C518`, hover `#E6B800`) with dark green semibold text and a small arrow (flipped for Urdu/Punjabi), the same shape and height as the Sign in button. Checked in the preview.
+
+**Before that:** demo button bright yellow (15 Nov, night)
 - Majid: make the demo button bright yellow so the NASA judges see it. `src/pages/Login.jsx`: "Just looking? Explore the demo farm" was small grey text; it is now a full-width solid yellow button (`#FFD60A`, dark green bold text, yellow glow ring, lighter on hover). Checked in the preview: it stands out under Sign in and still opens the demo dashboard.
 
 **Before that:** full diagnostic + satellite map display fixed (15 Nov, night)

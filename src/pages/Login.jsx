@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Sprout } from "lucide-react";
+import { ArrowRight, Sprout } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import FormField, { PrimaryButton } from "@/components/FormField";
 import GoogleButton, { GOOGLE_SIGNIN_ENABLED, OrDivider } from "@/components/GoogleButton";
@@ -59,13 +59,15 @@ export default function Login() {
         {error && <p role="alert" className="text-sm text-alert">{error}</p>}
         <PrimaryButton disabled={busy}>{busy ? t("Signing in…") : t("Sign in")}</PrimaryButton>
       </form>
-      {/* Bright yellow so judges (NASA Space Apps) spot the demo at once. */}
+      {/* The demo is what judges open first: a plain solid yellow button, same shape as Sign in,
+          no glow or gradient, so it is easy to spot without looking flashy. */}
       <button
         onClick={demo}
         disabled={busy}
-        className="mt-4 w-full rounded-xl bg-[#FFD60A] px-4 py-3 text-sm font-bold text-[#123D2A] shadow-[0_0_0_3px_rgba(255,214,10,0.35),0_8px_24px_-6px_rgba(255,214,10,0.6)] transition hover:bg-[#FFE34D] hover:shadow-[0_0_0_4px_rgba(255,214,10,0.5),0_10px_28px_-6px_rgba(255,214,10,0.75)] active:scale-[0.99] disabled:opacity-60 focus-ring"
+        className="group mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#F5C518] px-4 py-2.5 text-sm font-semibold text-[#14281D] transition-colors hover:bg-[#E6B800] disabled:opacity-60 focus-ring"
       >
         {t("Just looking? Explore the demo farm")}
+        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" aria-hidden="true" />
       </button>
     </AuthLayout>
   );
